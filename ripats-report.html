@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATBU RIPATS - Research Innovation, Patent and Tracking System</title>
+    <style>
+        :root {
+            --primary: #1a365d;
+            --secondary: #2c5282;
+            --accent: #38b2ac;
+            --light: #edf2f7;
+            --dark: #1a202c;
+            --success: #38a169;
+            --warning: #d69e2e;
+            --danger: #e53e3e;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--dark);
+            background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+            min-height: 100vh;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 3rem 2rem;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        header .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            font-weight: 300;
+        }
+
+        header .badge {
+            display: inline-block;
+            background: var(--accent);
+            padding: 0.3rem 1rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            margin-top: 1rem;
+            font-weight: 600;
+        }
+
+        nav {
+            background: white;
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        nav ul {
+            list-style: none;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        nav a {
+            text-decoration: none;
+            color: var(--primary);
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            transition: all 0.3s;
+        }
+
+        nav a:hover {
+            background: var(--light);
+            color: var(--accent);
+        }
+
+        main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        section {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        h2 {
+            color: var(--primary);
+            border-bottom: 3px solid var(--accent);
+            padding-bottom: 0.5rem;
+            margin-bottom: 1.5rem;
+            font-size: 1.8rem;
+        }
+
+        h3 {
+            color: var(--secondary);
+            margin: 1.5rem 0 1rem;
+            font-size: 1.3rem;
+        }
+
+        h4 {
+            color: var(--dark);
+            margin: 1rem 0 0.5rem;
+        }
+
+        p {
+            margin-bottom: 1rem;
+        }
+
+        .highlight-box {
+            background: linear-gradient(135deg, #ebf8ff 0%, #e6fffa 100%);
+            border-left: 4px solid var(--accent);
+            padding: 1.5rem;
+            border-radius: 0 8px 8px 0;
+            margin: 1.5rem 0;
+        }
+
+        .highlight-box h4 {
+            color: var(--primary);
+            margin-top: 0;
+        }
+
+        .core-finding {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 12px;
+            margin: 2rem 0;
+        }
+
+        .core-finding h3 {
+            color: var(--accent);
+            margin-top: 0;
+        }
+
+        .key-phrase {
+            background: var(--light);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-family: monospace;
+            color: var(--danger);
+            font-weight: bold;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            font-size: 0.95rem;
+        }
+
+        th {
+            background: var(--primary);
+            color: white;
+            padding: 1rem;
+            text-align: left;
+        }
+
+        td {
+            padding: 0.8rem 1rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        tr:hover {
+            background: var(--light);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .card {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 1.5rem;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        }
+
+        .card h4 {
+            color: var(--primary);
+            margin-top: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .card-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--accent);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin: 0.25rem;
+        }
+
+        .tag-public { background: #c6f6d5; color: #22543d; }
+        .tag-restricted { background: #fefcbf; color: #744210; }
+        .tag-confidential { background: #fed7d7; color: #742a2a; }
+        .tag-ip { background: #e9d8fd; color: #44337a; }
+
+        .timeline {
+            position: relative;
+            padding-left: 2rem;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: var(--accent);
+        }
+
+        .timeline-item {
+            position: relative;
+            padding-bottom: 1.5rem;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -2.35rem;
+            top: 0.25rem;
+            width: 12px;
+            height: 12px;
+            background: var(--accent);
+            border-radius: 50%;
+            border: 3px solid white;
+            box-shadow: 0 0 0 3px var(--accent);
+        }
+
+        .timeline-item h4 {
+            margin-top: 0;
+        }
+
+        .roadmap {
+            background: linear-gradient(135deg, #faf5ff 0%, #f0fff4 100%);
+            padding: 2rem;
+            border-radius: 12px;
+        }
+
+        .roadmap h3 {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .phase {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            border-left: 4px solid var(--accent);
+        }
+
+        .phase-number {
+            background: var(--primary);
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .phase-content h4 {
+            margin: 0;
+            color: var(--primary);
+        }
+
+        .phase-content p {
+            margin: 0.5rem 0 0;
+            font-size: 0.9rem;
+            color: #4a5568;
+        }
+
+        .feature-list {
+            list-style: none;
+        }
+
+        .feature-list li {
+            padding: 0.5rem 0;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+
+        .feature-list li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: var(--success);
+            font-weight: bold;
+        }
+
+        .tech-stack {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin: 1rem 0;
+        }
+
+        .tech-item {
+            background: var(--light);
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-card .number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            display: block;
+        }
+
+        .stat-card .label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        footer {
+            background: var(--dark);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+            margin-top: 2rem;
+        }
+
+        footer p {
+            opacity: 0.8;
+            margin-bottom: 0.5rem;
+        }
+
+        .workflow-diagram {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            padding: 2rem;
+            background: var(--light);
+            border-radius: 8px;
+            margin: 1.5rem 0;
+        }
+        
+        .workflow-diagram span {
+          color: black;
+        }
+
+        .workflow-step {
+            background: white;
+            padding: 0.75rem 1rem;
+            border-radius: 6px;
+            font-weight: 500;
+            border: 2px solid var(--accent);
+        }
+
+        .workflow-arrow {
+            color: var(--accent);
+            font-size: 1.5rem;
+        }
+
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 1.8rem;
+            }
+
+            nav ul {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            main {
+                padding: 1rem;
+            }
+
+            section {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>ATBU RIPATS</h1>
+        <p class="subtitle">Research Innovation, Patent and Tracking System</p>
+        <p class="subtitle">Research-Ready Technical Findings Report | Track F: Education & Campus Systems</p>
+        <span class="badge">Protecting University Research</span>
+    </header>
+
+    <nav>
+        <ul>
+            <li><a href="#executive-summary">Executive Summary</a></li>
+            <li><a href="#ecosystem">Ecosystem Assessment</a></li>
+            <li><a href="#model">Lifecycle Model</a></li>
+            <li><a href="#security">Security Architecture</a></li>
+            <li><a href="#roadmap">Development Roadmap</a></li>
+            <li><a href="#what-we-do">What We'll Do</a></li>
+        </ul>
+    </nav>
+
+    <main>
+        <!-- Executive Summary -->
+        <section id="executive-summary">
+            <h2>Executive Summary</h2>
+
+            <p>Nigeria does not lack digital repositories for academic research. Current national initiatives such as TETFund's TERAS and the NgREN Institutional Repository and Information Service (NIRIS) already address important problems of research storage, discovery, preservation and institutional access.</p>
+
+            <div class="highlight-box">
+                <h4>Current National Infrastructure</h4>
+                <ul>
+                    <li><strong>TERAS</strong> - Federated repositories, thesis submission, institutional identity services, EagleScan similarity checking</li>
+                    <li><strong>NIRIS</strong> - Visibility, accessibility, preservation, federated discovery of Nigerian scholarly outputs</li>
+                </ul>
+            </div>
+
+            <div class="core-finding">
+                <h3>Core Finding</h3>
+                <p>RIPATS should not replace TERAS, NIRIS, institutional repositories, plagiarism-checking systems or formal intellectual-property processes.</p>
+                <p><strong>It should operate as a secure research-lifecycle layer around them:</strong></p>
+                <div class="workflow-diagram">
+                    <span class="workflow-step">Protect</span>
+                    <span class="workflow-arrow">→</span>
+                    <span class="workflow-step">Verify</span>
+                    <span class="workflow-arrow">→</span>
+                    <span class="workflow-step">Control</span>
+                    <span class="workflow-arrow">→</span>
+                    <span class="workflow-step">Track</span>
+                    <span class="workflow-arrow">→</span>
+                    <span class="workflow-step">Connect</span>
+                </div>
+            </div>
+
+            <h3>The Problem We Solve</h3>
+            <p>Research repositories can contain unpublished findings, designs, datasets, source code and intellectual-property-sensitive material. A 2023 study of Nigerian university institutional repositories identified:</p>
+            <ul>
+                <li>Malware/malicious code threats</li>
+                <li>Password attacks</li>
+                <li>IP theft among prominent reported risks</li>
+            </ul>
+
+            <h3>Research Objectives</h3>
+            <div class="grid">
+                <div class="card">
+                    <h4><span class="card-icon">1</span> Avoid Duplication</h4>
+                    <p>Identify what the Nigerian research ecosystem already provides</p>
+                </div>
+                <div class="card">
+                    <h4><span class="card-icon">2</span> Identify Gaps</h4>
+                    <p>Security, provenance, controlled-disclosure and research-to-innovation gaps</p>
+                </div>
+                <div class="card">
+                    <h4><span class="card-icon">3</span> Define MVP</h4>
+                    <p>Minimum product features for a credible Track F prototype</p>
+                </div>
+                <div class="card">
+                    <h4><span class="card-icon">4</span> Security Architecture</h4>
+                    <p>Practical security architecture for a three-week hackathon MVP</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Ecosystem Assessment -->
+        <section id="ecosystem">
+            <h2>Assessment of the Existing Nigerian Research Ecosystem</h2>
+
+            <h3>1.1 Existing Capabilities</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>System / Layer</th>
+                        <th>Documented Capability</th>
+                        <th>RIPATS Implication</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>TERAS / TETFund</strong></td>
+                        <td>Federated thesis/research repositories; thesis submission; BIMS identity; institutional roles; EagleScan similarity checking</td>
+                        <td>Do not build another generic repository or plagiarism checker</td>
+                    </tr>
+                    <tr>
+                        <td><strong>NIRIS / NgREN</strong></td>
+                        <td>Federated repository for publications, theses and datasets; discoverability; preservation; persistent identifiers; institutional portals and SSO</td>
+                        <td>Do not compete on research visibility alone</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Institutional Repositories</strong></td>
+                        <td>Universities manage and expose academic outputs through institutional systems and national federation</td>
+                        <td>Support institutional governance rather than bypass it</td>
+                    </tr>
+                    <tr>
+                        <td><strong>IP / Technology-Transfer</strong></td>
+                        <td>Existing institutional and national mechanisms support formal IP and technology-transfer activities</td>
+                        <td>Track and document the digital journey; do not claim to grant patents</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>1.2 Material Gaps</h3>
+            <div class="grid">
+                <div class="card">
+                    <h4><span class="card-icon">🔒</span> Confidentiality Before Publication</h4>
+                    <p>Unpublished designs, datasets, code and inventions may require restricted handling.</p>
+                    <p><strong>RIPATS Response:</strong> Classification + controlled disclosure</p>
+                </div>
+                <div class="card">
+                    <h4><span class="card-icon">✓</span> Provenance</h4>
+                    <p>A repository record may not provide a complete security history.</p>
+                    <p><strong>RIPATS Response:</strong> Research ID + timestamp + version history + cryptographic fingerprint</p>
+                </div>
+                <div class="card">
+                    <h4><span class="card-icon">🛡️</span> Integrity</h4>
+                    <p>A research file may need evidence that a registered version has not been altered.</p>
+                    <p><strong>RIPATS Response:</strong> SHA-256 verification + version comparison</p>
+                </div>
+                <div class="card">
+                    <h4><span class="card-icon">🔑</span> Fine-Grained Authorization</h4>
+                    <p>Authentication does not automatically justify access to every project.</p>
+                    <p><strong>RIPATS Response:</strong> Resource-level authorization, least privilege, deny-by-default</p>
+                </div>
+                <div class="card">
+                    <h4><span class="card-icon">📊</span> Access Accountability</h4>
+                    <p>Without detailed security logs, suspicious access may be hard to reconstruct.</p>
+                    <p><strong>RIPATS Response:</strong> Audit trail and security monitoring</p>
+                </div>
+                <div class="card">
+                    <h4><span class="card-icon">💡</span> Controlled Innovation Discovery</h4>
+                    <p>Collaborators need enough information to discover an innovation without receiving the full research package.</p>
+                    <p><strong>RIPATS Response:</strong> Public innovation profile + access-request workflow</p>
+                </div>
+            </div>
+
+            <div class="highlight-box">
+                <h4>The Central Gap</h4>
+                <p>Research security, provenance, controlled access, monitoring and safe innovation discovery should operate as <strong>one lifecycle</strong> rather than isolated functions.</p>
+            </div>
+        </section>
+
+        <!-- Lifecycle Model -->
+        <section id="model">
+            <h2>RIPATS: Proposed Secure Research-Lifecycle Model</h2>
+
+            <h3>2.1 Solution Definition</h3>
+            <p><strong>RIPATS</strong> is a <em>cybersecurity-focused research lifecycle platform</em> that protects university research through:</p>
+            <ul class="feature-list">
+                <li>Verified provenance</li>
+                <li>Controlled access</li>
+                <li>Integrity monitoring</li>
+                <li>Audit tracking</li>
+            </ul>
+            <p>While enabling safe discovery and collaboration around promising innovations.</p>
+
+            <h3>2.2 Operating Model</h3>
+            <div class="timeline">
+                <div class="timeline-item">
+                    <h4>1. Register</h4>
+                    <p>Researcher submits project metadata and files. Security control: Verified identity and affiliation.</p>
+                </div>
+                <div class="timeline-item">
+                    <h4>2. Verify</h4>
+                    <p>Supervisor/institution confirms relationship and authority. Security control: Role-based approval.</p>
+                </div>
+                <div class="timeline-item">
+                    <h4>3. Protect - Classify</h4>
+                    <p>Public, Restricted, Confidential or IP-sensitive. Security control: Classification-driven policy.</p>
+                </div>
+                <div class="timeline-item">
+                    <h4>4. Fingerprint</h4>
+                    <p>Record Research ID, version, timestamp and SHA-256 hash. Security control: Integrity evidence.</p>
+                </div>
+                <div class="timeline-item">
+                    <h4>5. Discover</h4>
+                    <p>Expose safe innovation profile: problem, abstract, field, application, stage. Security control: No automatic exposure of restricted files.</p>
+                </div>
+                <div class="timeline-item">
+                    <h4>6. Request</h4>
+                    <p>External user requests protected access and states purpose. Security control: Explicit access request.</p>
+                </div>
+                <div class="timeline-item">
+                    <h4>7. Approve</h4>
+                    <p>Authorized party approves, rejects or limits access. Security control: Least privilege; time-limited permissions.</p>
+                </div>
+                <div class="timeline-item">
+                    <h4>8. Monitor</h4>
+                    <p>Record viewing, download, sharing and permission events. Security control: Audit trail.</p>
+                </div>
+                <div class="timeline-item">
+                    <h4>9. Detect</h4>
+                    <p>Identify unusual access or repeated failures. Security control: Rules/anomaly alerts.</p>
+                </div>
+                <div class="timeline-item">
+                    <h4>10. Connect</h4>
+                    <p>Approved parties collaborate through institutional/IP processes. Security control: Traceable hand-off.</p>
+                </div>
+            </div>
+
+            <h3>2.3 Roles</h3>
+            <div class="grid">
+                <div class="card">
+                    <h4>Researcher/Student</h4>
+                    <p>Creates research records, submits versions and manages permitted sharing.</p>
+                </div>
+                <div class="card">
+                    <h4>Supervisor</h4>
+                    <p>Verifies academic relationship and participates in approvals.</p>
+                </div>
+                <div class="card">
+                    <h4>University/IP Officer</h4>
+                    <p>Handles institutional ownership, disclosure and IP-sensitive decisions.</p>
+                </div>
+                <div class="card">
+                    <h4>Investor/Industry Partner</h4>
+                    <p>Discovers approved innovation summaries and requests controlled access.</p>
+                </div>
+                <div class="card">
+                    <h4>Security Officer</h4>
+                    <p>Reviews security events and alerts.</p>
+                </div>
+                <div class="card">
+                    <h4>System Administrator</h4>
+                    <p>Manages configuration without unnecessary access to research content.</p>
+                </div>
+            </div>
+
+            <h3>2.4 Research Classification Levels</h3>
+            <div class="grid">
+                <div class="card">
+                    <h4><span class="tag tag-public">PUBLIC</span></h4>
+                    <p><strong>Typical content:</strong> Approved abstract, published work, non-sensitive innovation summary.</p>
+                    <p><strong>Default exposure:</strong> Discoverable.</p>
+                </div>
+                <div class="card">
+                    <h4><span class="tag tag-restricted">RESTRICTED</span></h4>
+                    <p><strong>Typical content:</strong> Full academic work or supporting material requiring controlled access.</p>
+                    <p><strong>Default exposure:</strong> Authorized users only.</p>
+                </div>
+                <div class="card">
+                    <h4><span class="tag tag-confidential">CONFIDENTIAL</span></h4>
+                    <p><strong>Typical content:</strong> Unpublished results, sensitive datasets, proprietary designs or source code.</p>
+                    <p><strong>Default exposure:</strong> Explicit approval.</p>
+                </div>
+                <div class="card">
+                    <h4><span class="tag tag-ip">IP-SENSITIVE</span></h4>
+                    <p><strong>Typical content:</strong> Potential patent/commercial material before formal disclosure.</p>
+                    <p><strong>Default exposure:</strong> Highest control; institutional/IP review.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Security Architecture -->
+        <section id="security">
+            <h2>Security Architecture and MVP Requirements</h2>
+
+            <h3>3.1 Security Requirements</h3>
+            <p>Based on OWASP guidelines for authentication, authorization, logging, and secure application development.</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Layer</th>
+                        <th>Minimum Implementation</th>
+                        <th>Purpose</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Authentication</strong></td>
+                        <td>Strong passwords; verified institutional/email identity; OTP/MFA for sensitive actions; secure sessions</td>
+                        <td>Reduce account compromise</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Authorization</strong></td>
+                        <td>RBAC + resource-level permissions; server-side checks; deny-by-default; least privilege</td>
+                        <td>Prevent unauthorized access</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Encryption</strong></td>
+                        <td>TLS in transit; encrypted storage for sensitive documents and secrets</td>
+                        <td>Protect confidentiality</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Integrity</strong></td>
+                        <td>SHA-256 fingerprint for every registered file/version</td>
+                        <td>Detect unauthorized modification</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Audit Logging</strong></td>
+                        <td>Record who, what, resource, timestamp, result and relevant context</td>
+                        <td>Accountability and investigation</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Monitoring</strong></td>
+                        <td>Rules for failed logins, unusual downloads, abnormal project access and privilege changes</td>
+                        <td>Detect suspicious behaviour</td>
+                    </tr>
+                    <tr>
+                        <td><strong>File Security</strong></td>
+                        <td>Type/size validation, safe storage names, malware scanning, controlled downloads</td>
+                        <td>Reduce malicious file risk</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Backup/Recovery</strong></td>
+                        <td>Versioned encrypted backups and recovery testing</td>
+                        <td>Preserve availability and evidence</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Privacy</strong></td>
+                        <td>Data minimization, purpose limitation, access control and retention rules</td>
+                        <td>Responsible personal-data handling</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>3.2 Threat Model</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Threat</th>
+                        <th>Impact</th>
+                        <th>Primary Control</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Compromised student account</td>
+                        <td>Restricted research is read/downloaded</td>
+                        <td>MFA/OTP, rate limits, anomaly detection</td>
+                    </tr>
+                    <tr>
+                        <td>Insider privilege abuse</td>
+                        <td>User accesses unrelated projects</td>
+                        <td>Least privilege, resource authorization, audit trail</td>
+                    </tr>
+                    <tr>
+                        <td>Direct API manipulation</td>
+                        <td>UI restrictions are bypassed</td>
+                        <td>Server-side authorization on every protected action</td>
+                    </tr>
+                    <tr>
+                        <td>Malicious upload</td>
+                        <td>Server/user exposed to malicious content</td>
+                        <td>Validation, scanning, isolated storage</td>
+                    </tr>
+                    <tr>
+                        <td>Document alteration</td>
+                        <td>Integrity/provenance dispute</td>
+                        <td>Hash, versions, controlled replacement</td>
+                    </tr>
+                    <tr>
+                        <td>Audit-log tampering</td>
+                        <td>Incident cannot be reconstructed</td>
+                        <td>Restricted access, tamper detection, protected storage</td>
+                    </tr>
+                    <tr>
+                        <td>Excessive external access</td>
+                        <td>Sensitive research exposed beyond intended scope</td>
+                        <td>Time-limited permission explicit approval</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>3.3 Three-Week MVP</h3>
+            <p>MVP should demonstrate security behaviour rather than attempt every future capability.</p>
+
+            <div class="highlight-box">
+                <h4>Six Visible Modules</h4>
+                <ul class="feature-list">
+                    <li>Secure login</li>
+                    <li>Research registration/classification</li>
+                    <li>Innovation discovery</li>
+                    <li>Access-request/approval</li>
+                    <li>Hash-based integrity verification</li>
+                    <li>Security/audit dashboard</li>
+                </ul>
+            </div>
+
+            <div class="highlight-box">
+                <h4>Recommended Demo Scenario</h4>
+                <p>Student uploads project → RIPATS creates Research ID, timestamp hash → full document is Confidential → external user sees only innovation summary → access is requested → researcher approves time-limited access → access is recorded → abnormal access pattern is simulated → dashboard raises alert preserves audit trail.</p>
+            </div>
+        </section>
+
+        <!-- Development Roadmap -->
+        <section id="roadmap">
+            <h2>Gap-to-Implementation: Development Roadmap</h2>
+
+            <h3>4.1 Final Gap Analysis</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Finding</th>
+                        <th>Evidence-Based Interpretation</th>
+                        <th>RIPATS Decision</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Nigeria already has research repositories</td>
+                        <td>TERAS NIRIS provide discovery, repository preservation</td>
+                        <td>Integrate conceptually; do not duplicate</td>
+                    </tr>
+                    <tr>
+                        <td>Repository security is a genuine concern</td>
+                        <td>Nigerian repository research reports malware, password attacks, IP theft</td>
+                        <td>Cybersecurity is central differentiator</td>
+                    </tr>
+                    <tr>
+                        <td>Research needs controlled disclosure</td>
+                        <td>Not every artifact should have same visibility before publication/IP review</td>
+                        <td>Separate innovation metadata from protected files</td>
+                    </tr>
+                    <tr>
+                        <td>Access must be accountable</td>
+                        <td>OWASP recommends robust authorization and security-event logging</td>
+                        <td>Server-side authorization + audit trail</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>4.2 Expected Impact</h3>
+            <div class="grid">
+                <div class="card">
+                    <h4><span class="card-icon">👨‍🔬</span> For Researchers</h4>
+                    <p>Stronger evidence of authorship, version history, controlled disclosure.</p>
+                </div>
+                <div class="card">
+                    <h4><span class="card-icon">🏛️</span> For Universities</h4>
+                    <p>Better visibility into who accesses sensitive research and when.</p>
+                </div>
+                <div class="card">
+                    <h4><span class="card-icon">🔒</span> For Security Teams</h4>
+                    <p>Actionable audit events rather than relying only on ordinary application logs.</p>
+                </div>
+                <div class="card">
+                    <h4><span class="card-icon">🤝</span> For Collaborators</h4>
+                    <p>Discover innovations without unrestricted access to confidential research.</p>
+                </div>
+                <div class="card">
+                    <h4><span class="card-icon">📈</span> For Innovation</h4>
+                    <p>Technology-transfer workflows begin with a better-documented digital record.</p>
+                </div>
+            </div>
+
+            <h3>4.3 Recommended Development Sequence</h3>
+            <div class="roadmap">
+                <ol style="list-style: none; counter-reset: phase;">
+                    <div class="phase">
+                        <div class="phase-number">1</div>
+                        <div class="phase-content">
+                            <h4>Define Data Model</h4>
+                            <p>User, Institution, Research, Version, Classification, Permission, Access Request, Audit Event, Alert</p>
+                        </div>
+                    </div>
+                    <div class="phase">
+                        <div class="phase-number">2</div>
+                        <div class="phase-content">
+                            <h4>Implement Server-Side Authorization</h4>
+                            <p>Before advanced interface features; every protected action must be authorized</p>
+                        </div>
+                    </div>
+                    <div class="phase">
+                        <div class="phase-number">3</div>
+                        <div class="phase-content">
+                            <h4>Build Registration & Controlled-Access Workflow</h4>
+                            <p>Core user journey: register → classify → discover → request → approve</p>
+                        </div>
+                    </div>
+                    <div class="phase">
+                        <div class="phase-number">4</div>
+                        <div class="phase-content">
+                            <h4>Add SHA-256 Integrity Verification</h4>
+                            <p>Visible version history with cryptographic fingerprinting</p>
+                        </div>
+                    </div>
+                    <div class="phase">
+                        <div class="phase-number">5</div>
+                        <div class="phase-content">
+                            <h4>Implement Comprehensive Audit Logging</h4>
+                            <p>Login, access denial, document access, downloads, permission changes, administrative actions</p>
+                        </div>
+                    </div>
+                    <div class="phase">
+                        <div class="phase-number">6</div>
+                        <div class="phase-content">
+                            <h4>Build Anomaly Detection Engine</h4>
+                            <p>Rule-based anomaly engine for demo; no ML claims without training data</p>
+                        </div>
+                    </div>
+                    <div class="phase">
+                        <div class="phase-number">7</div>
+                        <div class="phase-content">
+                            <h4>Use Synthetic Demo Data</h4>
+                            <p>Use synthetic/demo research user data for hackathon presentation</p>
+                        </div>
+                    </div>
+                </ol>
+            </div>
+        </section>
+
+        <!-- What We'll Do -->
+        <section id="what-we-do">
+            <h2>What We Will Do With This Project</h2>
+
+            <p>Based on the research findings in this report, we will develop a full-stack implementation of the RIPATS platform for ATBU (Abubakar Tafawa Balewa University).</p>
+
+            <h3>Project Goals</h3>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <span class="number">3</span>
+                    <span class="label">Week MVP Development</span>
+                </div>
+                <div class="stat-card">
+                    <span class="number">6</span>
+                    <span class="label">Core Security Modules</span>
+                </div>
+                <div class="stat-card">
+                    <span class="number">5</span>
+                    <span class="label">User Roles</span>
+                </div>
+                <div class="stat-card">
+                    <span class="number">4</span>
+                    <span class="label">Classification Levels</span>
+                </div>
+            </div>
+
+            <h3>Technology Stack</h3>
+            <p>We will build the MVP using modern, security-focused technologies:</p>
+            <div class="tech-stack">
+                <span class="tech-item">React / Next.js</span>
+                <span class="tech-item">Node.js / Express</span>
+                <span class="tech-item">PostgreSQL</span>
+                <span class="tech-item">Redis (Session/Cache)</span>
+                <span class="tech-item">Docker</span>
+                <span class="tech-item">SHA-256 Hashing</span>
+                <span class="tech-item">JWT Authentication</span>
+                <span class="tech-item">MFA/OTP</span>
+                <span class="tech-item">RBAC Authorization</span>
+            </div>
+
+            <h3>Deliverables</h3>
+            <div class="grid">
+                <div class="card">
+                    <h4><span class="card-icon">🔐</span> Secure Authentication System</h4>
+                    <p>Institutional email verification, MFA/OTP, secure session management, password strength validation</p>
+                </div>
+                <div class="card">
+                    <h4><span class="card-icon">📝</span> Research Registration Portal</h4>
+                    <p>Project metadata submission, file uploads with SHA-256 fingerprinting, classification selection</p>
+                </div>
+                <div class="card">
+                    <h4><span class="card-icon">💡</span> Innovation Discovery Engine</h4>
+                    <p>Public innovation profiles with controlled disclosure, searchable by field/application/stage</p>
+                </div>
+                <div class="card">
+                    <h4><span class="card-icon">🔑</span> Access Request Workflow</h4>
+                    <p>Request submission, approval/rejection workflow, time-limited permissions, purpose documentation</p>
+                </div>
+                <div class="card">
+                    <h4><span class="card-icon">✅</span> Integrity Verification</h4>
+                    <p>Version history with hash comparison, file integrity checks, tamper detection alerts</p>
+                </div>
+                <div class="card">
+                    <h4><span class="card-icon">📊</span> Security Dashboard</h4>
+                    <p>Audit trail viewer, anomaly alerts, login monitoring, access pattern analysis</p>
+                </div>
+            </div>
+
+            <h3>Implementation Phases</h3>
+            <div class="roadmap">
+                <div class="phase">
+                    <div class="phase-number">W1</div>
+                    <div class="phase-content">
+                        <h4>Foundation & Authentication</h4>
+                        <p>Project setup, database schema, user authentication with MFA, RBAC authorization framework</p>
+                    </div>
+                </div>
+                <div class="phase">
+                    <div class="phase-number">W2</div>
+                    <div class="phase-content">
+                        <h4>Core Features</h4>
+                        <p>Research registration with classification, file upload with SHA-256 hashing, innovation discovery portal</p>
+                    </div>
+                </div>
+                <div class="phase">
+                    <div class="phase-number">W3</div>
+                    <div class="phase-content">
+                        <h4>Security & Polish</h4>
+                        <p>Access request workflow, audit logging, anomaly detection dashboard, demo scenario testing</p>
+                    </div>
+                </div>
+            </div>
+
+            <h3>Research & Compliance</h3>
+            <ul>
+                <li><strong>Evidence Base:</strong> Current official documentation from TETFund TERAS and NIRIS, Nigerian academic cybersecurity research</li>
+                <li><strong>Security Standards:</strong> OWASP guidelines for authentication, authorization, logging, and secure development</li>
+                <li><strong>Privacy:</strong> Nigerian data protection guidance compliance, data minimization principles</li>
+                <li><strong>Integration:</strong> Designed to complement TERAS and NIRIS, not replace them</li>
+            </ul>
+
+            <div class="core-finding" style="margin-top: 2rem;">
+                <h3>Project Conclusion</h3>
+                <p>The strongest evidence-based case for ATBU RIPATS is not that Nigerian research has no digital home.</p>
+                <p><strong>It is that research security and research commercialization require controls that sit across the lifecycle.</strong></p>
+                <p>Existing national infrastructure materially improved discovery, repository federation, identity and academic originality checking.</p>
+                <p>RIPATS addresses a complementary security problem: establishing trusted provenance, protecting sensitive research, enforcing controlled access, monitoring use, detecting abnormal behaviour, and exposing innovation safely.</p>
+                <p style="font-size: 1.2rem; font-weight: bold; margin-top: 1rem;">Protect → Verify → Control → Track → Connect</p>
+            </div>
+        </section>
+
+        <!-- References -->
+        <section id="references">
+            <h2>References</h2>
+            <ol style="padding-left: 1.5rem;">
+                <li style="margin-bottom: 0.5rem;">TETFund TERAS, "Services: Research Repository and EagleScan Similarity Report," accessed September 2026.</li>
+                <li style="margin-bottom: 0.5rem;">TETFund TERAS, "Partner Institutions," accessed September 2026.</li>
+                <li style="margin-bottom: 0.5rem;">NgREN, "About NIRIS – NgREN Institutional Repository Information Service," accessed 2026.</li>
+                <li style="margin-bottom: 0.5rem;">Nigerian University Institutional Repository Cybersecurity Research, 2023.</li>
+                <li style="margin-bottom: 0.5rem;">OWASP Foundation, "Authentication Cheat Sheet," OWASP Cheat Sheet Series, accessed September 2026.</li>
+                <li style="margin-bottom: 0.5rem;">OWASP Foundation, "Logging Cheat Sheet," OWASP Cheat Sheet Series, accessed September 2026.</li>
+            </ol>
+        </section>
+    </main>
+
+    <footer>
+        <p><strong>ATBU RIPATS - Research Innovation, Patent and Tracking System</strong></p>
+        <p>Track F: Education & Campus Systems – Protecting University Research</p>
+        <p style="margin-top: 1rem; font-size: 0.9rem;">Research-Ready Technical Findings Report | September 2026</p>
+    </footer>
+
+    <script>
+        // Smooth scrolling for navigation
+        document.querySelectorAll('nav a').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+        });
+
+        // Highlight current section in navigation
+        const sections = document.querySelectorAll('section');
+        const navLinks = document.querySelectorAll('nav a');
+
+        window.addEventListener('scroll', () => {
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                const sectionHeight = section.clientHeight;
+                if (scrollY >= sectionTop - 200) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navLinks.forEach(link => {
+                link.style.background = 'transparent';
+                link.style.color = 'var(--primary)';
+                if (link.getAttribute('href') === '#' + current) {
+                    link.style.background = 'var(--accent)';
+                    link.style.color = 'white';
+                }
+            });
+        });
+    </script>
+</body>
+</html>
