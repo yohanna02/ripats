@@ -20,7 +20,7 @@ export function ResearcherHome() {
     { initialNumItems: 5 },
   );
   if (data === undefined || me === undefined) return <Loading />;
-  const canRegister = ["researcher", "administrator", "ip_officer"].includes(
+  const canRegister = ["researcher", "partner", "supervisor"].includes(
     me?.role ?? "",
   );
   return (
@@ -45,9 +45,9 @@ export function ResearcherHome() {
           Icon={LibraryBig}
         />
         <MetricCard
-          label="Requests to review"
-          value={data.pendingAccessRequests ?? 0}
-          detail="Requests for research you own"
+          label="My access requests"
+          value={data.submittedAccessRequests ?? 0}
+          detail="Requests you have submitted"
           Icon={KeyRound}
           tone="gold"
         />
@@ -135,7 +135,9 @@ export function ResearcherHome() {
               </Link>
             }
           />
-          {requests.results.length ? (
+          {requests.status === "LoadingFirstPage" ? (
+            <Loading />
+          ) : requests.results.length ? (
             <div className="rp-audit-list">
               {requests.results.map((r: any) => (
                 <article key={r._id}>

@@ -4,6 +4,7 @@ import {
 } from "convex/server";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import type { Doc } from "./_generated/dataModel";
 import {
   requireAdministrator,
   requireDisclosureOfficer,
@@ -17,6 +18,41 @@ const classification = v.union(
   v.literal("confidential"),
   v.literal("ip_sensitive"),
 );
+
+async function notifyOwner(
+  ctx: Parameters<typeof recordEvent>[0],
+  record: Doc<"research">,
+  title: string,
+  detail: string,
+  kind: "success" | "error" | "info" | "warning",
+) {
+  await ctx.db.insert("notifications", {
+    recipientProfileId: record.ownerProfileId,
+    researchId: record._id,
+    title,
+    detail,
+    kind,
+    createdAt: Date.now(),
+  });
+}
+
+async function notifyProfile(
+  ctx: Parameters<typeof recordEvent>[0],
+  recipientProfileId: Doc<"userProfiles">["_id"],
+  researchId: Doc<"research">["_id"],
+  title: string,
+  detail: string,
+  kind: "success" | "error" | "info" | "warning",
+) {
+  await ctx.db.insert("notifications", {
+    recipientProfileId,
+    researchId,
+    title,
+    detail,
+    kind,
+    createdAt: Date.now(),
+  });
+}
 
 export const listMine = query({
   args: { paginationOpts: paginationOptsValidator },
@@ -74,6 +110,8 @@ export const publicProfiles = query({
       field: v.string(),
       stage: v.string(),
       application: v.optional(v.string()),
+      status: v.string(),
+      protected: v.boolean(),
     }),
   ),
   handler: async (ctx, args) => {
@@ -84,38 +122,32 @@ export const publicProfiles = query({
     if (!institution) return { page: [], isDone: true, continueCursor: "" };
     const page = await ctx.db
       .query("research")
-      .withIndex("by_institution_id_and_innovation_published", (q) =>
-        q.eq("institutionId", institution._id).eq("innovationPublished", true),
+      .withIndex("by_institution_id_and_updated_at", (q) =>
+        q.eq("institutionId", institution._id),
       )
       .order("desc")
       .paginate(args.paginationOpts);
     const eligible = page.page.filter(
-      (record) =>
-        record.status === "published" &&
-        Boolean(record.innovationSummary?.trim()),
+      (record) => record.status === "published" && record.innovationPublished,
     );
+    const toProfile = (record: (typeof eligible)[number]) => ({
+      _id: record._id,
+      researchId: record.researchId,
+      title: record.title,
+      abstract:
+        record.innovationPublished && record.innovationSummary?.trim()
+          ? record.innovationSummary
+          : "Protected research record. Request authorization to access the full paper.",
+      field: record.field,
+      stage: record.stage,
+      application: record.application,
+      status: record.status,
+      protected: !(record.innovationPublished && record.innovationSummary?.trim()),
+    });
     if (!args.search?.trim())
       return {
         ...page,
-        page: eligible.map(
-          ({
-            _id,
-            researchId,
-            title,
-            innovationSummary,
-            field,
-            stage,
-            application,
-          }) => ({
-            _id,
-            researchId,
-            title,
-            abstract: innovationSummary ?? "",
-            field,
-            stage,
-            application,
-          }),
-        ),
+        page: eligible.map(toProfile),
       };
     const normalized = args.search.trim().toLowerCase();
     return {
@@ -126,25 +158,7 @@ export const publicProfiles = query({
             .toLowerCase()
             .includes(normalized),
         )
-        .map(
-          ({
-            _id,
-            researchId,
-            title,
-            innovationSummary,
-            field,
-            stage,
-            application,
-          }) => ({
-            _id,
-            researchId,
-            title,
-            abstract: innovationSummary ?? "",
-            field,
-            stage,
-            application,
-          }),
-        ),
+        .map(toProfile),
     };
   },
 });
@@ -162,6 +176,8 @@ export const publicProfileById = query({
       stage: v.string(),
       application: v.union(v.string(), v.null()),
       collaborationSought: v.union(v.string(), v.null()),
+      status: v.string(),
+      protected: v.boolean(),
     }),
   ),
   handler: async (ctx, args) => {
@@ -171,26 +187,30 @@ export const publicProfileById = query({
       .unique();
     if (
       !record ||
-      !record.innovationPublished ||
       record.status !== "published" ||
-      !record.innovationSummary?.trim()
+      !record.innovationPublished
     )
       return null;
     return {
       _id: record._id,
       researchId: record.researchId,
       title: record.title,
-      abstract: record.innovationSummary ?? "",
+      abstract:
+        record.innovationPublished && record.innovationSummary?.trim()
+          ? record.innovationSummary
+          : "Protected research record. Request authorization to access the full paper.",
       field: record.field,
       stage: record.stage,
       application: record.application ?? null,
       collaborationSought: record.collaborationSought ?? null,
+      status: record.status,
+      protected: !(record.innovationPublished && record.innovationSummary?.trim()),
     };
   },
 });
 
 export const get = query({
-  args: { id: v.id("research"), now: v.number() },
+  args: { id: v.id("research"), now: v.number(), deviceKey: v.optional(v.string()) },
   returns: v.union(v.null(), v.any()),
   handler: async (ctx, args) => {
     const profile = await requireProfile(ctx);
@@ -209,7 +229,9 @@ export const get = query({
       allowed = grants.some(
         (grant) =>
           grant.requesterProfileId === profile._id &&
-          (grant.expiresAt ?? 0) > args.now,
+          (grant.expiresAt ?? 0) > args.now &&
+          grant.requestedScopes?.view === true &&
+          grant.sessionDeviceKeyHash === args.deviceKey,
       );
     }
     if (!allowed) return null;
@@ -239,12 +261,15 @@ export const myAccessRequests = query({
     const enriched = [];
     for (const request of page.page) {
       const research = await ctx.db.get(request.researchId);
-      if (research)
-        enriched.push({
-          ...request,
-          researchTitle: research.title,
-          researchCode: research.researchId,
-        });
+      enriched.push({
+        ...request,
+        // Keep the request visible even if a related record is removed or
+        // becomes unavailable. A request is still useful audit history.
+        researchTitle: research?.title ?? "Research record unavailable",
+        researchCode: research?.researchId ?? "Unavailable",
+        accessCode:
+          request.status === "approved" ? request.accessCode ?? null : null,
+      });
     }
     return { ...page, page: enriched };
   },
@@ -267,9 +292,9 @@ export const create = mutation({
   handler: async (ctx, args) => {
     const profile = await requireProfile(ctx);
     if (
-      profile.role !== "researcher" &&
-      profile.role !== "administrator" &&
-      profile.role !== "ip_officer"
+      !["researcher", "partner", "supervisor", "administrator", "ip_officer"].includes(
+        profile.role,
+      )
     )
       throw new Error("Your account cannot register research.");
     const now = Date.now();
@@ -338,16 +363,6 @@ export const update = mutation({
     department: v.optional(v.string()),
     classification: v.optional(classification),
     stage: v.optional(v.string()),
-    status: v.optional(
-      v.union(
-        v.literal("draft"),
-        v.literal("submitted"),
-        v.literal("verified"),
-        v.literal("in_review"),
-        v.literal("published"),
-      ),
-    ),
-    innovationPublished: v.optional(v.boolean()),
     problemStatement: v.optional(v.string()),
     application: v.optional(v.string()),
     collaborationSought: v.optional(v.string()),
@@ -364,22 +379,6 @@ export const update = mutation({
       profile.role === "ip_officer";
     if (!canEdit)
       throw new Error("You do not have permission to edit this record.");
-    if (
-      args.innovationPublished !== undefined &&
-      profile.role !== "administrator" &&
-      profile.role !== "ip_officer"
-    )
-      throw new Error(
-        "An institutional IP officer or administrator must publish innovation profiles.",
-      );
-    if (
-      args.innovationPublished === true &&
-      !record.innovationSummary?.trim() &&
-      !args.innovationSummary?.trim()
-    )
-      throw new Error(
-        "An approved innovation summary is required before publication.",
-      );
     const { id, ...patch } = args;
     await ctx.db.patch(id, { ...patch, updatedAt: Date.now() });
     await recordEvent(
@@ -528,7 +527,13 @@ export const addVersion = mutation({
       createdAt: Date.now(),
     });
     const now = Date.now();
-    await ctx.db.patch(record._id, { updatedAt: now });
+    const submittedForReview =
+      record.status === "draft" || record.status === "rejected";
+    await ctx.db.patch(record._id, {
+      status: submittedForReview ? "submitted" : record.status,
+      innovationPublished: false,
+      updatedAt: now,
+    });
     const metrics = await ctx.db
       .query("institutionMetrics")
       .withIndex("by_institution_id", (q) =>
@@ -548,12 +553,101 @@ export const addVersion = mutation({
       "success",
       record._id,
     );
+    if (submittedForReview) {
+      await notifyOwner(
+        ctx,
+        record,
+        "Research submitted for review",
+        `${record.researchId} is awaiting institutional verification.`,
+        "info",
+      );
+    }
     return versionId;
   },
 });
 
+export const myNotifications = query({
+  args: {},
+  returns: v.array(v.any()),
+  handler: async (ctx) => {
+    const profile = await requireProfile(ctx);
+    return await ctx.db
+      .query("notifications")
+      .withIndex("by_recipient_profile_id_and_created_at", (q) =>
+        q.eq("recipientProfileId", profile._id),
+      )
+      .order("desc")
+      .take(25);
+  },
+});
+
+export const markNotificationsRead = mutation({
+  args: { ids: v.array(v.id("notifications")) },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const profile = await requireProfile(ctx);
+    const now = Date.now();
+    for (const id of args.ids.slice(0, 25)) {
+      const notification = await ctx.db.get(id);
+      if (notification?.recipientProfileId === profile._id && !notification.readAt)
+        await ctx.db.patch(notification._id, { readAt: now });
+    }
+    return null;
+  },
+});
+
+export const decideSubmission = mutation({
+  args: {
+    id: v.id("research"),
+    decision: v.union(v.literal("approved"), v.literal("rejected")),
+    note: v.optional(v.string()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const reviewer = await requireDisclosureOfficer(ctx);
+    const record = await ctx.db.get(args.id);
+    if (!record || record.institutionId !== reviewer.institutionId)
+      throw new Error("Research record not found.");
+    if (record.status !== "submitted")
+      throw new Error("Only submitted research with an uploaded document can be reviewed.");
+    const version = await ctx.db
+      .query("researchVersions")
+      .withIndex("by_research_id", (q) => q.eq("researchId", record._id))
+      .first();
+    if (!version) throw new Error("Upload a research document before review.");
+
+    const approved = args.decision === "approved";
+    if (approved && !record.innovationSummary?.trim())
+      throw new Error("Add an approved public innovation summary before authorizing visibility.");
+    const reviewNote = args.note?.trim();
+    await ctx.db.patch(record._id, {
+      status: approved ? "published" : "rejected",
+      innovationPublished: approved,
+      updatedAt: Date.now(),
+    });
+    await recordEvent(
+      ctx,
+      reviewer,
+      `research.submission.${args.decision}`,
+      `${approved ? "Authorized" : "Rejected"} ${record.researchId}${reviewNote ? `: ${reviewNote}` : "."}`,
+      approved ? "success" : "warning",
+      record._id,
+    );
+    await notifyOwner(
+      ctx,
+      record,
+      approved ? "Research authorized and visible" : "Research submission rejected",
+      approved
+        ? `${record.researchId} has passed review and is now visible in the public archive.`
+        : `${record.researchId} needs changes before it can be resubmitted.${reviewNote ? ` Reviewer note: ${reviewNote}` : ""}`,
+      approved ? "success" : "error",
+    );
+    return null;
+  },
+});
+
 export const getVersionDownloadUrl = mutation({
-  args: { versionId: v.id("researchVersions") },
+  args: { versionId: v.id("researchVersions"), deviceKey: v.optional(v.string()) },
   returns: v.union(v.null(), v.string()),
   handler: async (ctx, args) => {
     const profile = await requireProfile(ctx);
@@ -576,7 +670,9 @@ export const getVersionDownloadUrl = mutation({
       allowed = grants.some(
         (grant) =>
           grant.requesterProfileId === profile._id &&
-          (grant.expiresAt ?? 0) > Date.now(),
+          (grant.expiresAt ?? 0) > Date.now() &&
+          grant.requestedScopes?.download === true &&
+          grant.sessionDeviceKeyHash === args.deviceKey,
       );
     }
     if (!allowed) {
@@ -657,20 +753,27 @@ export const requestAccess = mutation({
     organization: v.string(),
     purpose: v.string(),
     durationHours: v.number(),
+    requestedScopes: v.object({
+      view: v.boolean(),
+      download: v.boolean(),
+      summary: v.boolean(),
+    }),
   },
   returns: v.id("accessRequests"),
   handler: async (ctx, args) => {
     const profile = await requireProfile(ctx);
     const user = await ctx.db.get(profile.userId);
     const record = await ctx.db.get(args.researchId);
-    if (!record || !record.innovationPublished || record.status !== "published")
+    if (!record || record.status !== "published" || !record.innovationPublished)
       throw new Error(
-        "This approved innovation profile does not accept access requests.",
+        "Only approved public research records accept access requests.",
       );
     if (record.ownerProfileId === profile._id)
       throw new Error("You already manage this research record.");
     if (args.durationHours < 1 || args.durationHours > 720)
       throw new Error("Access duration must be 1 to 720 hours.");
+    if (!args.requestedScopes.view && !args.requestedScopes.download && !args.requestedScopes.summary)
+      throw new Error("Select at least one access scope.");
     const id = await ctx.db.insert("accessRequests", {
       institutionId: record.institutionId,
       researchId: record._id,
@@ -681,6 +784,7 @@ export const requestAccess = mutation({
       organization: args.organization.trim(),
       purpose: args.purpose.trim(),
       durationHours: args.durationHours,
+      requestedScopes: args.requestedScopes,
       risk: "low",
       status: "pending",
       createdAt: Date.now(),
@@ -803,19 +907,13 @@ export const decideAccess = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const profile = await requireProfile(ctx);
+    const profile = await requireDisclosureOfficer(ctx);
     const request = await ctx.db.get(args.id);
     if (!request || request.status !== "pending")
       throw new Error("Pending access request not found.");
     const record = await ctx.db.get(request.researchId);
     if (!record || record.institutionId !== profile.institutionId)
       throw new Error("Access request not found.");
-    const mayDecide =
-      record.ownerProfileId === profile._id ||
-      profile.role === "administrator" ||
-      profile.role === "ip_officer";
-    if (!mayDecide)
-      throw new Error("You do not have authority to decide this request.");
     const now = Date.now();
     await ctx.db.patch(request._id, {
       status: args.decision,
@@ -825,6 +923,13 @@ export const decideAccess = mutation({
         args.decision === "approved"
           ? now + request.durationHours * 60 * 60 * 1000
           : undefined,
+      accessCode:
+        args.decision === "approved"
+          ? String(Math.floor(100000 + Math.random() * 900000))
+          : undefined,
+      sessionDeviceKeyHash: undefined,
+      sessionActivatedAt: undefined,
+      sessionLastUsedAt: undefined,
     });
     const metrics = await ctx.db
       .query("institutionMetrics")
@@ -845,6 +950,44 @@ export const decideAccess = mutation({
       "success",
       record._id,
     );
+    await notifyProfile(
+      ctx,
+      request.requesterProfileId,
+      record._id,
+      args.decision === "approved" ? "Access request approved" : "Access request declined",
+      args.decision === "approved"
+        ? `Your request for ${record.researchId} was approved. Open My access requests to view the activation code and activate your session.`
+        : `Your request for ${record.researchId} was declined.`,
+      args.decision === "approved" ? "success" : "error",
+    );
+    return null;
+  },
+});
+
+export const activateAccess = mutation({
+  args: {
+    requestId: v.id("accessRequests"),
+    accessCode: v.string(),
+    deviceKey: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const profile = await requireProfile(ctx);
+    const request = await ctx.db.get(args.requestId);
+    if (!request || request.requesterProfileId !== profile._id)
+      throw new Error("Access grant not found.");
+    if (request.status !== "approved" || (request.expiresAt ?? 0) <= Date.now())
+      throw new Error("This access grant has expired or is not approved.");
+    if (request.accessCode !== args.accessCode.trim())
+      throw new Error("Invalid access code.");
+    if (request.sessionDeviceKeyHash && request.sessionDeviceKeyHash !== args.deviceKey)
+      throw new Error("This grant is already activated on another device.");
+    await ctx.db.patch(request._id, {
+      sessionDeviceKeyHash: args.deviceKey,
+      sessionActivatedAt: request.sessionActivatedAt ?? Date.now(),
+      sessionLastUsedAt: Date.now(),
+    });
+    await recordEvent(ctx, profile, "access.session.activated", `Activated one-session access for ${request._id}.`, "success", request.researchId);
     return null;
   },
 });
@@ -916,6 +1059,12 @@ export const dashboardSummary = query({
         .take(10);
       mine.push(...requests);
     }
+    const submittedRequests = await ctx.db
+      .query("accessRequests")
+      .withIndex("by_requester_profile_id_and_status", (q) =>
+        q.eq("requesterProfileId", profile._id),
+      )
+      .take(1000);
     const events = await ctx.db
       .query("auditEvents")
       .withIndex("by_institution_id_and_created_at", (q) =>
@@ -927,6 +1076,7 @@ export const dashboardSummary = query({
       role: profile.role,
       researchCount: records.length,
       pendingAccessRequests: mine.length,
+      submittedAccessRequests: submittedRequests.length,
       verifiedVersions: 0,
       research: records.slice(0, 8),
       events,

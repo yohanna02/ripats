@@ -9,12 +9,11 @@ import { dateLabel, errorText, roleNames } from "../core/constants";
 import type { Classification, Profile, Research } from "../core/types";
 import { Badge, ClassificationBadge, Empty, Loading, Mark, PageHeading, PanelHeader, PrimaryButton, RecordRows, SecondaryButton, TextArea, TextField } from "../../components/ui/product";
 import { useToast } from "../../components/ui/toast";
+import { accessDeviceKey } from "../core/accessDevice";
 export function RegistryPage({
   admin = false,
-  archive = false,
 }: {
   admin?: boolean;
-  archive?: boolean;
 }) {
   const [filter, setFilter] = useState<Classification | "all">("all");
   const [search, setSearch] = useState("");
@@ -38,40 +37,22 @@ export function RegistryPage({
         .includes(search.toLowerCase()),
   );
   const workspace = admin ? "/admin" : "/app";
-  const canRegister = ["researcher", "administrator", "ip_officer"].includes(
-    me?.role ?? "",
-  );
+  const canRegister = !admin
+    ? ["researcher", "partner", "supervisor"].includes(me?.role ?? "")
+    : ["administrator", "ip_officer"].includes(me?.role ?? "");
   return (
     <>
       <PageHeading
-        eyebrow={
-          archive
-            ? admin
-              ? "INSTITUTIONAL ARCHIVE"
-              : "MY ARCHIVE"
-            : "RESEARCH LIFECYCLE"
-        }
-        title={
-          archive
-            ? admin
-              ? "Institutional archive"
-              : "My archive"
-            : admin
-              ? "Research registry"
-              : "My research"
-        }
-        detail={
-          archive
-            ? "Preserved records and authoritative version history."
-            : "Register, classify, verify and manage research records."
-        }
+        eyebrow={admin ? "ATBU RESEARCH REGISTRY" : "MY RESEARCH WORKSPACE"}
+        title={admin ? "Research registry" : "My research"}
+        detail="Register, classify, verify and manage research records."
         action={
           canRegister && (
             <Link
               className="rp-primary"
-              to={`${workspace}/${archive ? "archive" : "research"}/new`}
+              to={`${workspace}/research/new`}
             >
-              <Upload /> {archive ? "Upload archive" : "Upload research"}
+              <Upload /> Upload research
             </Link>
           )
         }
@@ -137,17 +118,19 @@ export function ResearchDetailPage() {
   const record = useQuery(api.research.get, {
     id: id as Id<"research">,
     now,
+    deviceKey: accessDeviceKey(),
   }) as any;
   const update = useMutation(api.research.update);
+  const decideSubmission = useMutation(api.research.decideSubmission);
   const remove = useMutation(api.research.remove);
   const navigate = useNavigate();
   const [editing, setEditing] = useState(false);
   const [saveBusy, setSaveBusy] = useState(false);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [recordError, setRecordError] = useState("");
-  const [publicationBusy, setPublicationBusy] = useState(false);
-  const [publicationError, setPublicationError] = useState("");
-  const [publicationMessage, setPublicationMessage] = useState("");
+  const [reviewBusy, setReviewBusy] = useState(false);
+  const [reviewError, setReviewError] = useState("");
+  const [reviewNote, setReviewNote] = useState("");
   const { showToast } = useToast();
   if (record === undefined || me === undefined) return <Loading />;
   if (!record)
@@ -160,8 +143,10 @@ export function ResearchDetailPage() {
   const canManage =
     record.ownerProfileId === me?.profileId ||
     ["administrator", "ip_officer"].includes(me?.role ?? "");
-  const canPublish = ["administrator", "ip_officer"].includes(me?.role ?? "");
-  const archiveRoute = location.pathname.includes("/archive");
+  const canReview =
+    ["administrator", "ip_officer"].includes(me?.role ?? "") &&
+    record.status === "submitted";
+  const canUpload = record.ownerProfileId === me?.profileId;
   const canDelete = canManage && record.status === "draft" && !record.innovationPublished;
   const saveRecord = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -183,7 +168,7 @@ export function ResearchDetailPage() {
         collaborationSought: String(form.get("collaborationSought")).trim() || undefined,
       });
       setEditing(false);
-      showToast({ kind: "success", title: "Archive record updated" });
+      showToast({ kind: "success", title: "Research record updated" });
     } catch (error) {
       const message = errorText(error);
       setRecordError(message);
@@ -203,10 +188,8 @@ export function ResearchDetailPage() {
     setRecordError("");
     try {
       await remove({ id: record._id });
-      showToast({ kind: "success", title: "Draft archive record deleted" });
-      navigate(location.pathname.startsWith("/admin") ? "/admin/archive" : "/app/archive", {
-        replace: true,
-      });
+      showToast({ kind: "success", title: "Draft research record deleted" });
+      navigate(location.pathname.startsWith("/admin") ? "/admin/research" : "/app/research", { replace: true });
     } catch (error) {
       const message = errorText(error);
       setRecordError(message);
@@ -215,46 +198,36 @@ export function ResearchDetailPage() {
       setDeleteBusy(false);
     }
   };
-  const publish = async () => {
-    setPublicationBusy(true);
-    setPublicationError("");
-    setPublicationMessage("");
+  const reviewSubmission = async (decision: "approved" | "rejected") => {
+    setReviewBusy(true);
+    setReviewError("");
     try {
-      if (!record.innovationSummary?.trim())
-        throw new Error(
-          "Add an approved public innovation summary before publishing.",
-        );
-      await update({
+      await decideSubmission({
         id: record._id,
-        status: "published",
-        innovationPublished: !record.innovationPublished,
+        decision,
+        note: reviewNote.trim() || undefined,
       });
-      const message = record.innovationPublished
-        ? "Innovation profile unpublished."
-        : "Innovation profile published.";
-      setPublicationMessage(message);
-      showToast({ kind: "success", title: message });
+      showToast({
+        kind: decision === "approved" ? "success" : "warning",
+        title:
+          decision === "approved"
+            ? "Research authorized and published"
+            : "Research submission rejected",
+      });
+      setReviewNote("");
     } catch (error) {
       const message = errorText(error);
-      setPublicationError(message);
-      showToast({ kind: "error", title: "Publication update failed", detail: message });
+      setReviewError(message);
+      showToast({ kind: "error", title: "Review decision failed", detail: message });
     } finally {
-      setPublicationBusy(false);
+      setReviewBusy(false);
     }
   };
   return (
     <>
       <Link
         className="rp-back"
-        to={
-          location.pathname.startsWith("/admin")
-            ? archiveRoute
-              ? "/admin/archive"
-              : "/admin/research"
-            : archiveRoute
-              ? "/app/archive"
-              : "/app/research"
-        }
+        to={location.pathname.startsWith("/admin") ? "/admin/research" : "/app/research"}
       >
         <ArrowLeft /> Back to research
       </Link>
@@ -324,29 +297,39 @@ export function ResearchDetailPage() {
                 <p>{record.innovationSummary || "No public innovation summary has been added."}</p>
               </>
             )}
-            {canPublish && (
+            {canReview && (
               <div className="rp-publication-action">
-                <PrimaryButton
-                  disabled={publicationBusy}
-                  onClick={() => void publish()}
-                >
-                  {publicationBusy
-                    ? "Saving…"
-                    : record.innovationPublished
-                      ? "Unpublish public profile"
-                      : "Publish public innovation profile"}
-                  <ArrowRight />
-                </PrimaryButton>
-                {publicationError && (
-                  <div className="rp-error">{publicationError}</div>
-                )}
-                {publicationMessage && <p>{publicationMessage}</p>}
+                <strong>Institutional review</strong>
+                <p>
+                  Authorize this submitted paper to make its approved innovation
+                  summary visible in the public archive, or reject it for revision.
+                </p>
+                <TextArea
+                  label="Review note"
+                  value={reviewNote}
+                  onChange={(event) => setReviewNote(event.target.value)}
+                />
+                <div className="rp-review-actions">
+                  <PrimaryButton
+                    disabled={reviewBusy}
+                    onClick={() => void reviewSubmission("approved")}
+                  >
+                    <CheckCircle2 /> {reviewBusy ? "Saving…" : "Authorize and publish"}
+                  </PrimaryButton>
+                  <SecondaryButton
+                    disabled={reviewBusy}
+                    onClick={() => void reviewSubmission("rejected")}
+                  >
+                    <XCircle /> Reject submission
+                  </SecondaryButton>
+                </div>
+                {reviewError && <div className="rp-error">{reviewError}</div>}
               </div>
             )}
             {canDelete && !editing && (
               <div className="rp-danger-action">
                 <div>
-                  <strong>Delete draft archive record</strong>
+                  <strong>Delete draft research record</strong>
                   <p>This permanently removes the draft and any uploaded versions.</p>
                 </div>
                 <button className="rp-danger-button" disabled={deleteBusy} onClick={() => void deleteRecord()}>
@@ -378,7 +361,7 @@ export function ResearchDetailPage() {
             )}
           </div>
         </section>
-        <aside>{canManage && <VersionUpload id={record._id} />}</aside>
+        <aside>{canUpload && <VersionUpload id={record._id} />}</aside>
       </div>
     </>
   );
@@ -415,7 +398,10 @@ function VersionRow({
   const getFile = async () => {
     setBusy(true);
     try {
-      const url = await getUrl({ versionId: version._id });
+      const url = await getUrl({
+        versionId: version._id,
+        deviceKey: accessDeviceKey(),
+      });
       if (url) {
         window.open(url, "_blank", "noopener,noreferrer");
         showToast({ kind: "success", title: "Download started" });
@@ -568,6 +554,11 @@ export function RequestAccess({ id }: { id: Id<"research"> }) {
         organization: String(form.get("organization")),
         purpose: String(form.get("purpose")),
         durationHours: Number(form.get("duration")),
+        requestedScopes: {
+          view: form.get("scope-view") === "on",
+          download: form.get("scope-download") === "on",
+          summary: form.get("scope-summary") === "on",
+        },
       });
       setMsg("Access request submitted.");
       setOpen(false);
@@ -604,6 +595,12 @@ export function RequestAccess({ id }: { id: Id<"research"> }) {
           <form onSubmit={submit}>
             <TextField name="organization" label="Organization" required />
             <TextArea name="purpose" label="Purpose for access" required />
+            <fieldset className="rp-scope-options">
+              <legend>Requested access</legend>
+              <label><input type="checkbox" name="scope-view" defaultChecked /> View / read the protected paper</label>
+              <label><input type="checkbox" name="scope-summary" defaultChecked /> Receive the research summary</label>
+              <label><input type="checkbox" name="scope-download" /> Download a copy</label>
+            </fieldset>
             <TextField
               name="duration"
               label="Access duration (hours)"
@@ -626,10 +623,8 @@ export function RequestAccess({ id }: { id: Id<"research"> }) {
 
 export function NewResearchPage({
   admin = false,
-  archive = false,
 }: {
   admin?: boolean;
-  archive?: boolean;
 }) {
   const create = useMutation(api.research.create);
   const navigate = useNavigate();
@@ -655,12 +650,8 @@ export function NewResearchPage({
         application: String(form.get("application")) || undefined,
         collaborationSought: String(form.get("collaboration")) || undefined,
       });
-      showToast({
-        kind: "success",
-        title: "Research record created",
-        detail: "Add the authoritative file version to establish its fingerprint.",
-      });
-      navigate(`${workspace}/${archive ? "archive" : "research"}/${id}`);
+      showToast({ kind: "success", title: "Research record created", detail: "Add the authoritative file version to establish its fingerprint." });
+      navigate(`${workspace}/research/${id}`);
     } catch (cause) {
       const message = errorText(cause);
       setError(message);
@@ -671,12 +662,12 @@ export function NewResearchPage({
   };
   return (
     <>
-      <Link className="rp-back" to={`${workspace}/${archive ? "archive" : "research"}`}>
-        <ArrowLeft /> Back to {archive ? "archive" : "research"}
+      <Link className="rp-back" to={`${workspace}/research`}>
+        <ArrowLeft /> Back to research
       </Link>
       <PageHeading
-        eyebrow={archive ? "ARCHIVE · CREATE" : "RESEARCH LIFECYCLE · REGISTER"}
-        title={archive ? "Upload an archive record" : "Upload research"}
+        eyebrow="RESEARCH LIFECYCLE · REGISTER"
+        title="Upload research"
         detail="Register the research metadata first, then add the authoritative file version and SHA-256 fingerprint."
       />
       <form className="rp-panel rp-form" onSubmit={submit}>

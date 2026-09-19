@@ -62,6 +62,7 @@ export default defineSchema({
       v.literal("verified"),
       v.literal("in_review"),
       v.literal("published"),
+      v.literal("rejected"),
     ),
     innovationPublished: v.boolean(),
     problemStatement: v.optional(v.string()),
@@ -106,6 +107,13 @@ export default defineSchema({
     organization: v.string(),
     purpose: v.string(),
     durationHours: v.number(),
+    requestedScopes: v.optional(
+      v.object({
+        view: v.boolean(),
+        download: v.boolean(),
+        summary: v.boolean(),
+      }),
+    ),
     risk: v.union(v.literal("low"), v.literal("medium"), v.literal("high")),
     status: v.union(
       v.literal("pending"),
@@ -116,6 +124,10 @@ export default defineSchema({
     reviewedByProfileId: v.optional(v.id("userProfiles")),
     reviewedAt: v.optional(v.number()),
     expiresAt: v.optional(v.number()),
+    accessCode: v.optional(v.string()),
+    sessionDeviceKeyHash: v.optional(v.string()),
+    sessionActivatedAt: v.optional(v.number()),
+    sessionLastUsedAt: v.optional(v.number()),
     createdAt: v.number(),
   })
     .index("by_institution_id_and_status_and_created_at", [
@@ -144,6 +156,23 @@ export default defineSchema({
   })
     .index("by_institution_id_and_created_at", ["institutionId", "createdAt"])
     .index("by_research_id_and_created_at", ["researchId", "createdAt"]),
+  notifications: defineTable({
+    recipientProfileId: v.id("userProfiles"),
+    researchId: v.optional(v.id("research")),
+    title: v.string(),
+    detail: v.string(),
+    kind: v.union(
+      v.literal("success"),
+      v.literal("error"),
+      v.literal("info"),
+      v.literal("warning"),
+    ),
+    readAt: v.optional(v.number()),
+    createdAt: v.number(),
+  }).index("by_recipient_profile_id_and_created_at", [
+    "recipientProfileId",
+    "createdAt",
+  ]),
   securityAlerts: defineTable({
     institutionId: v.id("institutions"),
     researchId: v.optional(v.id("research")),

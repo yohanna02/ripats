@@ -26,6 +26,11 @@ export const seedAdministrator = internalMutation({
         `No Convex Auth account exists for ${email}. Register and verify this account first.`,
       );
     }
+    if (!user.emailVerificationTime) {
+      throw new Error(
+        `The Convex Auth account for ${email} must verify its email before it can be seeded as an administrator.`,
+      );
+    }
 
     const existingInstitution = await ctx.db
       .query("institutions")

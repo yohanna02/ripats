@@ -1,5 +1,5 @@
 import { NewResearchPage } from "../../features/research/screens";
 
-export default function NewResearch({ archive = false }: { archive?: boolean }) {
-  return <NewResearchPage admin archive={archive} />;
+export default function NewResearch() {
+  return <NewResearchPage admin />;
 }

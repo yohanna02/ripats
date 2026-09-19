@@ -9,14 +9,11 @@ import AdminDashboard from "../pages/admin/Dashboard";
 import AdminDocumentation from "../pages/admin/Documentation";
 import AdminNewResearch from "../pages/admin/NewResearch";
 import AdminReports from "../pages/admin/Reports";
-import AdminResearchArchive from "../pages/admin/ResearchRegistry";
 import AdminResearchRegistry from "../pages/admin/ResearchRegistry";
 import AdminResearchDetail from "../pages/admin/ResearchDetail";
 import AdminSecurity from "../pages/admin/Security";
 import AdminUsers from "../pages/admin/Users";
 import UserAccessRequests from "../pages/app/AccessRequests";
-import UserAccessReviews from "../pages/app/AccessReviews";
-import UserArchive from "../pages/app/Archive";
 import UserDashboard from "../pages/app/Dashboard";
 import UserDocumentation from "../pages/app/Documentation";
 import UserNewResearch from "../pages/app/NewResearch";
@@ -45,16 +42,10 @@ export function AppRoutes() {
           <Route element={<Guard roles={["researcher", "partner", "supervisor"]} />}>
             <Route index element={<UserDashboard />} />
             <Route path="research" element={<UserResearchRegistry />} />
-            <Route element={<Guard roles={["researcher"]} />}>
+            <Route element={<Guard roles={["researcher", "partner", "supervisor"]} />}>
               <Route path="research/new" element={<UserNewResearch />} />
-              <Route path="reviews" element={<UserAccessReviews />} />
             </Route>
             <Route path="research/:id" element={<UserResearchDetail />} />
-            <Route path="archive" element={<UserArchive />} />
-            <Route path="archive/:id" element={<UserResearchDetail />} />
-            <Route element={<Guard roles={["researcher"]} />}>
-              <Route path="archive/new" element={<UserNewResearch archive />} />
-            </Route>
             <Route path="access" element={<UserAccessRequests />} />
             <Route path="documentation" element={<UserDocumentation />} />
           </Route>
@@ -69,9 +60,6 @@ export function AppRoutes() {
             <Route path="research" element={<AdminResearchRegistry />} />
             <Route path="research/new" element={<AdminNewResearch />} />
             <Route path="research/:id" element={<AdminResearchDetail />} />
-            <Route path="archive" element={<AdminResearchArchive archive />} />
-            <Route path="archive/:id" element={<AdminResearchDetail />} />
-            <Route path="archive/new" element={<AdminNewResearch archive />} />
             <Route path="access" element={<AdminAccessReviews />} />
             <Route path="reports" element={<AdminReports />} />
           </Route>

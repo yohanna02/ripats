@@ -30,6 +30,11 @@ function PublicHeader() {
   );
 }
 export function LandingPage() {
+  const archive = usePaginatedQuery(
+    api.research.publicProfiles,
+    {},
+    { initialNumItems: 3 },
+  );
   return (
     <div className="rp-public">
       <PublicHeader />
@@ -57,7 +62,7 @@ export function LandingPage() {
                   Create your research account <ArrowRight />
                 </Link>
                 <Link className="rp-light-link" to="/research">
-                  Explore approved innovations <ArrowRight />
+                  Explore the research archive <ArrowRight />
                 </Link>
               </div>
               <div className="rp-hero-proof">
@@ -163,31 +168,44 @@ export function LandingPage() {
                 <em>Keep the evidence protected.</em>
               </h2>
               <p>
-                Approved public profiles describe the problem, application and
-                development stage. Research files, datasets, source code and
+                Every registered research record can be discovered here. Public
+                summaries stay visible while papers, datasets, source code and
                 unpublished findings remain behind institutional review.
               </p>
               <Link className="rp-secondary" to="/research">
                 Browse innovation archive <ArrowRight />
               </Link>
             </div>
-            <div className="rp-profile-demo">
+            <div className="rp-profile-demo rp-live-archive-preview">
               <header>
-                <Badge tone="green">Approved innovation profile</Badge>
-                <span>ATBU · Renewable Energy</span>
+                <Badge tone="green">Innovation archive</Badge>
+                <span>{archive.results.length} recent records</span>
               </header>
-              <h3>Solar-Powered Cold Chain for Rural Clinics</h3>
-              <p>
-                A modular thermal storage system designed for vaccine
-                preservation across off-grid health centres.
-              </p>
+              {archive.status === "LoadingFirstPage" ? (
+                <Loading />
+              ) : archive.results.length ? (
+                archive.results.map((item: any) => (
+                  <article key={item._id}>
+                    <div>
+                      <small>{item.field} · {item.stage}</small>
+                      <h3>{item.title}</h3>
+                      <p>{item.abstract}</p>
+                    </div>
+                    <span className="rp-live-archive-meta">
+                      {item.protected ? <><LockKeyhole /> Protected</> : <><ShieldCheck /> Discoverable</>}
+                      <Link to={`/research/${item.researchId}`} aria-label={`View ${item.title}`}><ArrowRight /></Link>
+                    </span>
+                  </article>
+                ))
+              ) : (
+                <div className="rp-live-archive-empty">
+                  <h3>Research is being prepared for discovery.</h3>
+                  <p>Published and protected records will appear here as they are registered.</p>
+                </div>
+              )}
               <footer>
-                <span>
-                  <LockKeyhole /> Full research package protected
-                </span>
-                <span>
-                  <ArrowRight />
-                </span>
+                <span><LockKeyhole /> Full research packages remain protected</span>
+                <Link to="/research">Open archive <ArrowRight /></Link>
               </footer>
             </div>
           </div>
@@ -408,10 +426,10 @@ export function PublicArchive() {
       <main>
         <section className="rp-archive-hero">
           <span className="rp-eyebrow">ATBU innovation archive</span>
-          <h1>Discover work approved for visibility.</h1>
+          <h1>Discover university research.</h1>
           <p>
-            Public profiles reveal the opportunity while unpublished files and
-            sensitive research remain protected.
+            Research records are visible for discovery while protected papers
+            and sensitive evidence remain behind authorization.
           </p>
           <label>
             <Search />
@@ -424,14 +442,14 @@ export function PublicArchive() {
         </section>
         <section className="rp-section">
           <div className="rp-section-heading compact">
-            <span className="rp-eyebrow">Public innovation profiles</span>
-            <h2>Research discovery with clear boundaries.</h2>
+            <span className="rp-eyebrow">Research archive</span>
+            <h2>Find the work. Request the evidence.</h2>
           </div>
           <div className="rp-public-grid">
             {results.map((item: any) => (
               <article key={item._id}>
                 <header>
-                  <Badge tone="green">Approved profile</Badge>
+                  <Badge tone={item.protected ? "gold" : "green"}>{item.protected ? "Protected record" : "Public summary"}</Badge>
                   <span>{item.stage}</span>
                 </header>
                 <small>
@@ -442,7 +460,7 @@ export function PublicArchive() {
                 <footer>
                   <span>{item.application || "Research collaboration"}</span>
                   <Link to={`/research/${item.researchId}`}>
-                    View approved summary <ArrowRight />
+                    View research record <ArrowRight />
                   </Link>
                 </footer>
               </article>
@@ -450,8 +468,8 @@ export function PublicArchive() {
           </div>
           {results.length === 0 && status != "LoadingFirstPage" && (
             <Empty
-              title="No public profiles yet"
-              detail="Approved innovation profiles will appear here when the university publishes them."
+              title="No research records yet"
+              detail="Registered research records will appear here as the university adds them."
             />
           )}
           {status === "LoadingFirstPage" && <Loading />}
@@ -508,7 +526,7 @@ export function PublicInnovationPage() {
       </section>
       <section className="rp-section rp-public-profile">
         <article>
-          <span className="rp-eyebrow">Approved innovation summary</span>
+          <span className="rp-eyebrow">Research record</span>
           <h2>Research opportunity</h2>
           <p>{record.abstract}</p>
           <h3>Potential application</h3>
@@ -520,7 +538,7 @@ export function PublicInnovationPage() {
             {record.collaborationSought ??
               "Contact the research team to discuss collaboration."}
           </p>
-          <Badge tone="green">Full research package protected</Badge>
+          <Badge tone={record.protected ? "gold" : "green"}>{record.protected ? "Full research package protected" : "Public summary available"}</Badge>
         </article>
         <aside>
           <h2>Interested in this work?</h2>

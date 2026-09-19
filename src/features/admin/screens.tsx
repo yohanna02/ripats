@@ -2,14 +2,14 @@
 import { useState, type FormEvent } from "react";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { Activity, ArrowRight, BookOpen, Check, CheckCircle2, ChevronDown, Search, ShieldAlert, XCircle } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import { dateLabel, errorText, roleNames } from "../core/constants";
 import type { Role } from "../core/types";
 import { Badge, Brand, Empty, Loading, Mark, PageHeading, PanelHeader, PrimaryButton, SecondaryButton, TextField } from "../../components/ui/product";
-import { RegistryPage } from "../research/screens";
 import { useToast } from "../../components/ui/toast";
+import { accessDeviceKey } from "../core/accessDevice";
 export function SecurityPage() {
   const page = usePaginatedQuery(
     api.research.listAlerts,
@@ -234,9 +234,6 @@ export function UsersPage() {
   );
 }
 
-export function ArchivePage() {
-  return <RegistryPage admin={false} archive />;
-}
 export function DocumentationPage() {
   const [search, setSearch] = useState("");
   const [openGuide, setOpenGuide] = useState<string | null>(null);
@@ -392,6 +389,33 @@ export function MyAccessPage() {
     {},
     { initialNumItems: 25 },
   );
+  const activate = useMutation(api.research.activateAccess);
+  const [codes, setCodes] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState("");
+  const { showToast } = useToast();
+  const activateRequest = async (requestId: Id<"accessRequests">) => {
+    setBusy(requestId);
+    setError("");
+    try {
+      await activate({
+        requestId,
+        accessCode: codes[requestId] ?? "",
+        deviceKey: accessDeviceKey(),
+      });
+      showToast({
+        kind: "success",
+        title: "Access session activated",
+        detail: "This device can now use the approved access scope until expiry.",
+      });
+    } catch (cause) {
+      const message = errorText(cause);
+      setError(message);
+      showToast({ kind: "error", title: "Access activation failed", detail: message });
+    } finally {
+      setBusy(null);
+    }
+  };
   return (
     <>
       <PageHeading
@@ -432,9 +456,43 @@ export function MyAccessPage() {
                   <strong>{r.expiresAt ? dateLabel(r.expiresAt) : "—"}</strong>
                 </div>
               )}
+              {r.status === "approved" && r.accessCode && (
+                <div>
+                  <small>Activation code</small>
+                  <strong>{r.accessCode}</strong>
+                </div>
+              )}
             </div>
+            {r.status === "approved" && (
+              <footer className="rp-access-activation">
+                <TextField
+                  label="Access code"
+                  value={codes[r._id] ?? ""}
+                  onChange={(event) =>
+                    setCodes((current) => ({
+                      ...current,
+                      [r._id]: event.target.value,
+                    }))
+                  }
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                />
+                <PrimaryButton
+                  disabled={busy === r._id || !codes[r._id]?.trim()}
+                  onClick={() => void activateRequest(r._id)}
+                >
+                  {busy === r._id ? "Activating…" : "Activate this device"}
+                </PrimaryButton>
+                {r.sessionDeviceKeyHash && (
+                  <Link className="rp-secondary" to={`/app/research/${r.researchId}`}>
+                    Open authorized record
+                  </Link>
+                )}
+              </footer>
+            )}
           </article>
         ))}
+        {error && <div className="rp-error">{error}</div>}
         {page.status === "LoadingFirstPage" && <Loading />}
         {page.results.length === 0 && page.status !== "LoadingFirstPage" && (
           <Empty

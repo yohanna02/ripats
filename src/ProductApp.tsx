@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useLayoutEffect } from "react";
 import { useConvexAuth } from "@convex-dev/auth/react";
 import { useQuery } from "convex/react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -16,7 +16,7 @@ export default function ProductApp() {
   const navigate = useNavigate();
   const setAuthState = useAppStore((state) => state.setAuthState);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (auth.isLoading || (auth.isAuthenticated && me === undefined)) {
       setAuthState("loading");
       return;
