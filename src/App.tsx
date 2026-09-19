@@ -37,7 +37,6 @@ import {
   Network,
   Plus,
   Search,
-  Shield,
   ShieldAlert,
   ShieldCheck,
   SlidersHorizontal,
@@ -916,7 +915,7 @@ function Registry({
             .includes(q.toLowerCase()) &&
           (filter === "All" || r.classification === filter),
       ),
-    [q, filter],
+    [q, filter, personal],
   );
   return (
     <>

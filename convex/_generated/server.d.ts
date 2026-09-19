@@ -30,6 +30,14 @@ import type { DataModel } from "./dataModel.js";
 type Env = {
   readonly CONVEX_CLOUD_URL: string;
   readonly CONVEX_SITE_URL: string;
+  readonly ATBU_ADMIN_EMAIL: string | undefined;
+  readonly ATBU_BOOTSTRAP_CODE: string | undefined;
+  readonly AUTH_EMAIL_FROM: string | undefined;
+  readonly SMTP_HOST: string | undefined;
+  readonly SMTP_PASS: string | undefined;
+  readonly SMTP_PORT: string | undefined;
+  readonly SMTP_SECURE: string | undefined;
+  readonly SMTP_USER: string | undefined;
 };
 
 /**

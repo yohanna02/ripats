@@ -26,6 +26,14 @@ export default defineSchema({
     domain: v.string(),
     createdAt: v.number(),
   }).index("by_code", ["code"]),
+  institutionMetrics: defineTable({
+    institutionId: v.id("institutions"),
+    researchCount: v.number(),
+    pendingAccessRequests: v.number(),
+    openSecurityAlerts: v.number(),
+    verifiedVersions: v.number(),
+    updatedAt: v.number(),
+  }).index("by_institution_id", ["institutionId"]),
   userProfiles: defineTable({
     userId: v.id("users"),
     institutionId: v.id("institutions"),
@@ -43,6 +51,7 @@ export default defineSchema({
     researchId: v.string(),
     title: v.string(),
     abstract: v.string(),
+    innovationSummary: v.optional(v.string()),
     field: v.string(),
     department: v.string(),
     classification,
@@ -62,9 +71,18 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index("by_institution_id_and_updated_at", ["institutionId", "updatedAt"])
-    .index("by_owner_profile_id_and_updated_at", ["ownerProfileId", "updatedAt"])
-    .index("by_institution_id_and_classification", ["institutionId", "classification"])
-    .index("by_institution_id_and_innovation_published", ["institutionId", "innovationPublished"])
+    .index("by_owner_profile_id_and_updated_at", [
+      "ownerProfileId",
+      "updatedAt",
+    ])
+    .index("by_institution_id_and_classification", [
+      "institutionId",
+      "classification",
+    ])
+    .index("by_institution_id_and_innovation_published", [
+      "institutionId",
+      "innovationPublished",
+    ])
     .index("by_research_id", ["researchId"]),
   researchVersions: defineTable({
     researchId: v.id("research"),
@@ -79,27 +97,48 @@ export default defineSchema({
     .index("by_research_id_and_version_number", ["researchId", "versionNumber"])
     .index("by_research_id", ["researchId"]),
   accessRequests: defineTable({
+    institutionId: v.id("institutions"),
     researchId: v.id("research"),
+    ownerProfileId: v.optional(v.id("userProfiles")),
+    requesterProfileId: v.id("userProfiles"),
     requesterName: v.string(),
     requesterEmail: v.string(),
     organization: v.string(),
     purpose: v.string(),
     durationHours: v.number(),
     risk: v.union(v.literal("low"), v.literal("medium"), v.literal("high")),
-    status: v.union(v.literal("pending"), v.literal("approved"), v.literal("declined"), v.literal("expired")),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("approved"),
+      v.literal("declined"),
+      v.literal("expired"),
+    ),
     reviewedByProfileId: v.optional(v.id("userProfiles")),
     reviewedAt: v.optional(v.number()),
     expiresAt: v.optional(v.number()),
     createdAt: v.number(),
   })
-    .index("by_research_id_and_status", ["researchId", "status"])
-    .index("by_status_and_created_at", ["status", "createdAt"]),
+    .index("by_institution_id_and_status_and_created_at", [
+      "institutionId",
+      "status",
+      "createdAt",
+    ])
+    .index("by_requester_profile_id_and_status", [
+      "requesterProfileId",
+      "status",
+    ])
+    .index("by_owner_profile_id_and_status", ["ownerProfileId", "status"])
+    .index("by_research_id_and_status", ["researchId", "status"]),
   auditEvents: defineTable({
     institutionId: v.id("institutions"),
     actorProfileId: v.optional(v.id("userProfiles")),
     researchId: v.optional(v.id("research")),
     action: v.string(),
-    outcome: v.union(v.literal("success"), v.literal("denied"), v.literal("warning")),
+    outcome: v.union(
+      v.literal("success"),
+      v.literal("denied"),
+      v.literal("warning"),
+    ),
     detail: v.string(),
     createdAt: v.number(),
   })

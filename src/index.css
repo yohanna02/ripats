@@ -1,2 +1,152 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Libre+Franklin:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@1,6..72,500&display=swap');
-:root{font-family:'DM Sans',sans-serif;color:#17211d;background:#f4f6f3;font-synthesis:none;text-rendering:optimizeLegibility;--ink:#17211d;--muted:#69736e;--green:#164f3d;--green2:#1f6b50;--soft:#e9f2ed;--gold:#b78a3d;--line:#dde2de;--red:#a13e3e}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;min-width:320px;min-height:100vh}button,input{font:inherit}button{cursor:pointer}button:focus-visible,input:focus-visible{outline:2px solid #2b8062;outline-offset:2px}svg{flex:0 0 auto}#root{min-height:100vh}
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Libre+Franklin:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@1,6..72,500&display=swap");
+@import "tailwindcss";
+:root {
+  font-family: "DM Sans", sans-serif;
+  color: #17211d;
+  background: #f4f6f3;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  --ink: #17211d;
+  --muted: #69736e;
+  --green: #164f3d;
+  --green2: #1f6b50;
+  --soft: #e9f2ed;
+  --gold: #b78a3d;
+  --line: #dde2de;
+  --red: #a13e3e;
+}
+* {
+  box-sizing: border-box;
+}
+html {
+  scroll-behavior: smooth;
+}
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  font-size: 16px;
+}
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+button {
+  cursor: pointer;
+}
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 3px solid #2b8062;
+  outline-offset: 3px;
+}
+svg {
+  flex: 0 0 auto;
+}
+#root {
+  min-height: 100vh;
+}
+.rp-config-screen {
+  min-height: 100vh;
+  padding: 30px;
+  display: grid;
+  place-items: center;
+  background: #f3f5f2;
+}
+.rp-config-screen > div {
+  width: min(620px, 100%);
+  padding: 38px;
+  background: #fff;
+  border: 1px solid #dce2dd;
+}
+.rp-config-screen h1 {
+  margin: 12px 0;
+  font-size: 34px;
+  line-height: 1.2;
+}
+.rp-config-screen p {
+  color: #64716a;
+  font-size: 16px;
+  line-height: 1.7;
+}
+.rp-config-screen code {
+  color: #174f3e;
+  font-size: 14px;
+}
+.rp-toast-region {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 100;
+  width: min(420px, calc(100vw - 32px));
+  display: grid;
+  gap: 10px;
+}
+.rp-toast {
+  min-height: 78px;
+  padding: 14px;
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) 32px;
+  align-items: start;
+  gap: 11px;
+  color: #26342c;
+  background: #fff;
+  border: 1px solid #dbe2dc;
+  border-left: 4px solid #2d7858;
+  box-shadow: 0 14px 32px rgba(25, 42, 33, 0.16);
+}
+.rp-toast > svg {
+  margin-top: 2px;
+  color: #2d7858;
+}
+.rp-toast strong {
+  display: block;
+  font-size: 15px;
+  line-height: 1.35;
+}
+.rp-toast p {
+  margin: 3px 0 0;
+  color: #657168;
+  font-size: 14px;
+  line-height: 1.45;
+}
+.rp-toast button {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  color: #5e6b63;
+  background: transparent;
+  border: 0;
+}
+.rp-toast button svg {
+  width: 18px;
+}
+.rp-toast.error {
+  border-left-color: #a13e3e;
+}
+.rp-toast.error > svg {
+  color: #a13e3e;
+}
+.rp-toast.warning {
+  border-left-color: #a47523;
+}
+.rp-toast.warning > svg {
+  color: #a47523;
+}
+.rp-toast.info {
+  border-left-color: #286c83;
+}
+.rp-toast.info > svg {
+  color: #286c83;
+}
+@media (max-width: 640px) {
+  .rp-toast-region {
+    right: 16px;
+    bottom: 16px;
+  }
+}

@@ -8,13 +8,29 @@
  * @module
  */
 
+import type * as account from "../account.js";
+import type * as auth from "../auth.js";
+import type * as http from "../http.js";
+import type * as lib_access from "../lib/access.js";
+import type * as mail from "../mail.js";
+import type * as research from "../research.js";
+import type * as seed from "../seed.js";
+
 import type {
   ApiFromModules,
   FilterApi,
   FunctionReference,
 } from "convex/server";
 
-declare const fullApi: ApiFromModules<{}>;
+declare const fullApi: ApiFromModules<{
+  account: typeof account;
+  auth: typeof auth;
+  http: typeof http;
+  "lib/access": typeof lib_access;
+  mail: typeof mail;
+  research: typeof research;
+  seed: typeof seed;
+}>;
 
 /**
  * A utility for referencing Convex functions in your app's public API.
