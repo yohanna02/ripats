@@ -8,7 +8,7 @@
 
     /* Bundler mode */
     "moduleResolution": "Bundler",
-    "module": "nodenext",
+    "module": "esnext",
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "moduleDetection": "force",
