@@ -116,6 +116,26 @@ export const ensureProfile = mutation({
   },
 });
 
+export const updateProfile = mutation({
+  args: {
+    displayName: v.string(),
+    department: v.optional(v.string()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const profile = await requireProfile(ctx);
+    const displayName = args.displayName.trim();
+    if (displayName.length < 2)
+      throw new Error("Display name must be at least 2 characters.");
+    await ctx.db.patch(profile._id, {
+      displayName,
+      department: args.department?.trim() || undefined,
+    });
+    await recordEvent(ctx, profile, "account.profile.updated", "Updated profile settings.");
+    return null;
+  },
+});
+
 export const bootstrapAdministrator = mutation({
   args: { code: v.string(), displayName: v.string() },
   returns: v.null(),

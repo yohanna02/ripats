@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useRef, useState, type FormEvent } from "react";
+import { useConvexAuth } from "@convex-dev/auth/react";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { ArrowLeft, ArrowRight, Check, CheckCircle2, ChevronDown, Clock3, Download, FileCheck2, Fingerprint, LockKeyhole, Pencil, Search, Trash2, Upload, XCircle } from "lucide-react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
@@ -10,6 +11,7 @@ import type { Classification, Profile, Research } from "../core/types";
 import { Badge, ClassificationBadge, Empty, Loading, Mark, PageHeading, PanelHeader, PrimaryButton, RecordRows, SecondaryButton, TextArea, TextField } from "../../components/ui/product";
 import { useToast } from "../../components/ui/toast";
 import { accessDeviceKey } from "../core/accessDevice";
+import { accessRequestContext } from "../core/requestContext";
 export function RegistryPage({
   admin = false,
 }: {
@@ -539,6 +541,7 @@ function VersionUpload({ id }: { id: Id<"research"> }) {
   );
 }
 export function RequestAccess({ id }: { id: Id<"research"> }) {
+  const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
   const send = useMutation(api.research.requestAccess);
   const [open, setOpen] = useState(false);
   const [msg, setMsg] = useState("");
@@ -546,6 +549,12 @@ export function RequestAccess({ id }: { id: Id<"research"> }) {
   const { showToast } = useToast();
   const submit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (authLoading || !isAuthenticated) {
+      const message = "Sign in with an active, verified account before requesting access.";
+      setMsg(message);
+      showToast({ kind: "error", title: "Sign in required", detail: message });
+      return;
+    }
     const form = new FormData(e.currentTarget);
     setBusy(true);
     try {
@@ -554,6 +563,7 @@ export function RequestAccess({ id }: { id: Id<"research"> }) {
         organization: String(form.get("organization")),
         purpose: String(form.get("purpose")),
         durationHours: Number(form.get("duration")),
+        requestContext: accessRequestContext(),
         requestedScopes: {
           view: form.get("scope-view") === "on",
           download: form.get("scope-download") === "on",
@@ -847,6 +857,26 @@ export function AccessPage({ owner = false }: { owner?: boolean }) {
                   <Clock3 /> {r.durationHours} hours
                 </strong>
               </div>
+              <div>
+                <small>Request activity</small>
+                <strong>{dateLabel(r.createdAt)}</strong>
+                <p>
+                  {r.requestContext?.channel ?? "web"} · {r.requestContext?.sourcePath ?? "Unknown route"}
+                  {r.requestContext?.timezone ? ` · ${r.requestContext.timezone}` : ""}
+                </p>
+                {r.requestContext?.referrer && (
+                  <small>Referrer: {r.requestContext.referrer}</small>
+                )}
+              </div>
+              {r.requestContext && (
+                <div>
+                  <small>Client context</small>
+                  <p>
+                    {r.requestContext.platform} · {r.requestContext.locale}
+                  </p>
+                  <small>{r.requestContext.userAgent}</small>
+                </div>
+              )}
             </div>
             {r.status === "pending" && (
               <footer>

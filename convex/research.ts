@@ -753,6 +753,16 @@ export const requestAccess = mutation({
     organization: v.string(),
     purpose: v.string(),
     durationHours: v.number(),
+    requestContext: v.object({
+      sessionId: v.string(),
+      sourcePath: v.string(),
+      referrer: v.optional(v.string()),
+      userAgent: v.string(),
+      platform: v.string(),
+      locale: v.string(),
+      timezone: v.string(),
+      channel: v.literal("web"),
+    }),
     requestedScopes: v.object({
       view: v.boolean(),
       download: v.boolean(),
@@ -774,6 +784,8 @@ export const requestAccess = mutation({
       throw new Error("Access duration must be 1 to 720 hours.");
     if (!args.requestedScopes.view && !args.requestedScopes.download && !args.requestedScopes.summary)
       throw new Error("Select at least one access scope.");
+    if (!args.requestContext.sessionId.trim())
+      throw new Error("An active browser session is required.");
     const id = await ctx.db.insert("accessRequests", {
       institutionId: record.institutionId,
       researchId: record._id,
@@ -784,6 +796,16 @@ export const requestAccess = mutation({
       organization: args.organization.trim(),
       purpose: args.purpose.trim(),
       durationHours: args.durationHours,
+      requestContext: {
+        sessionId: args.requestContext.sessionId.trim().slice(0, 160),
+        sourcePath: args.requestContext.sourcePath.trim().slice(0, 240),
+        referrer: args.requestContext.referrer?.trim().slice(0, 500),
+        userAgent: args.requestContext.userAgent.trim().slice(0, 500),
+        platform: args.requestContext.platform.trim().slice(0, 160),
+        locale: args.requestContext.locale.trim().slice(0, 80),
+        timezone: args.requestContext.timezone.trim().slice(0, 120),
+        channel: "web",
+      },
       requestedScopes: args.requestedScopes,
       risk: "low",
       status: "pending",

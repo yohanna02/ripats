@@ -107,6 +107,18 @@ export default defineSchema({
     organization: v.string(),
     purpose: v.string(),
     durationHours: v.number(),
+    requestContext: v.optional(
+      v.object({
+        sessionId: v.string(),
+        sourcePath: v.string(),
+        referrer: v.optional(v.string()),
+        userAgent: v.string(),
+        platform: v.string(),
+        locale: v.string(),
+        timezone: v.string(),
+        channel: v.literal("web"),
+      }),
+    ),
     requestedScopes: v.optional(
       v.object({
         view: v.boolean(),

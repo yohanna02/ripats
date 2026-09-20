@@ -23,6 +23,7 @@ import Home from "../pages/Home/Home";
 import InnovationProfile from "../pages/PublicArchive/InnovationProfile";
 import PublicArchive from "../pages/PublicArchive/PublicArchive";
 import { SetupAccount, SetupAdminPage } from "../features/auth/setupScreens";
+import SettingsPage from "../features/account/SettingsPage";
 
 export function AppRoutes() {
   return (
@@ -47,6 +48,7 @@ export function AppRoutes() {
             </Route>
             <Route path="research/:id" element={<UserResearchDetail />} />
             <Route path="access" element={<UserAccessRequests />} />
+            <Route path="profile" element={<SettingsPage />} />
             <Route path="documentation" element={<UserDocumentation />} />
           </Route>
         </Route>
@@ -55,6 +57,7 @@ export function AppRoutes() {
             <Route index element={<AdminDashboard />} />
             <Route path="security" element={<AdminSecurity />} />
             <Route path="documentation" element={<AdminDocumentation />} />
+            <Route path="profile" element={<SettingsPage />} />
           </Route>
           <Route element={<Guard roles={["administrator", "ip_officer"]} />}>
             <Route path="research" element={<AdminResearchRegistry />} />

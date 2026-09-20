@@ -1,14 +1,28 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState } from "react";
-import { useConvexAuth } from "@convex-dev/auth/react";
+import { useAuthActions, useConvexAuth } from "@convex-dev/auth/react";
 import { usePaginatedQuery, useQuery } from "convex/react";
-import { Activity, ArrowRight, Building2, ChevronDown, ClipboardCheck, FileText, Fingerprint, GraduationCap, KeyRound, LibraryBig, LockKeyhole, LogIn, Search, ShieldAlert, ShieldCheck, SlidersHorizontal, UserCheck } from "lucide-react";
-import { Link, useParams } from "react-router-dom";
+import { Activity, ArrowRight, Building2, ChevronDown, ClipboardCheck, FileText, Fingerprint, GraduationCap, KeyRound, LibraryBig, LockKeyhole, LogIn, LogOut, Search, Settings, ShieldAlert, ShieldCheck, SlidersHorizontal, UserCheck } from "lucide-react";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { api } from "../../../convex/_generated/api";
 import { Brand, Badge, ClassificationBadge, Empty, Loading, Mark } from "../../components/ui/product";
 import type { Classification, Profile } from "../core/types";
 import { RequestAccess } from "../research/screens";
+import { useAppStore } from "../../store/useAppStore";
 function PublicHeader() {
+  const authStatus = useAppStore((state) => state.authStatus);
+  const profile = useAppStore((state) => state.authProfile);
+  const { signOut } = useAuthActions();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const handleSignOut = async () => {
+    await signOut();
+    setMenuOpen(false);
+    navigate("/", { replace: true });
+  };
+  const dashboardPath = profile && ["administrator", "ip_officer", "security_officer"].includes(profile.role) ? "/admin" : "/app";
+  const initials = profile?.displayName.split(" ").map((part) => part[0]).slice(0, 2).join("").toUpperCase();
   return (
     <header className="rp-public-nav">
       <Brand />
@@ -18,13 +32,34 @@ function PublicHeader() {
         <a href="/#governance">Governance</a>
         <Link to="/documentation">Documentation</Link>
       </nav>
-      <div>
-        <Link className="rp-login-link" to="/sign-in">
-          <LogIn /> Sign in
-        </Link>
-        <Link className="rp-primary" to="/sign-up">
-          Create account <ArrowRight />
-        </Link>
+      <div className="rp-public-account">
+        {authStatus === "authenticated" && profile ? (
+          <div className="rp-profile-menu">
+            <button className="rp-profile-trigger" aria-expanded={menuOpen} onClick={() => setMenuOpen((open) => !open)}>
+              <span className="rp-avatar">{initials}</span>
+              <span>{profile.displayName}</span>
+              <ChevronDown />
+            </button>
+            {menuOpen && (
+              <div className="rp-profile-dropdown">
+                <strong>{profile.displayName}</strong>
+                <small>{profile.email}</small>
+                <Link to={dashboardPath} onClick={() => setMenuOpen(false)}><LogIn /> Dashboard</Link>
+                <Link to={`${dashboardPath}/profile`} onClick={() => setMenuOpen(false)}><Settings /> Profile & settings</Link>
+                <button onClick={() => void handleSignOut()}><LogOut /> Sign out</button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <>
+            <Link className="rp-login-link" to="/sign-in" state={{ from: location.pathname }}>
+              <LogIn /> Sign in
+            </Link>
+            <Link className="rp-primary" to="/sign-up">
+              Create account <ArrowRight />
+            </Link>
+          </>
+        )}
       </div>
     </header>
   );
