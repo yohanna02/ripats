@@ -10,7 +10,7 @@ importers:
     dependencies:
       '@convex-dev/auth':
         specifier: ^0.0.95
-        version: 0.0.95(@auth/core@0.41.3(nodemailer@7.0.13))(convex@1.46.0(react@19.3.0))(react@19.3.0)
+        version: 0.0.95(@auth/core@0.41.3(nodemailer@10.0.10))(convex@1.46.0(react@19.3.0))(react@19.3.0)
       convex:
         specifier: ^1.46.0
         version: 1.46.0(react@19.3.0)
@@ -18,8 +18,8 @@ importers:
         specifier: ^1.47.0
         version: 1.47.0(react@19.3.0)
       nodemailer:
-        specifier: ^7.0.7
-        version: 7.0.13
+        specifier: ^10.0.10
+        version: 10.0.10
       react:
         specifier: ^19.2.8
         version: 19.3.0
@@ -49,8 +49,11 @@ importers:
         specifier: ^7.20.5
         version: 7.20.5
       '@types/node':
-        specifier: ^24.13.3
+        specifier: ^24.13.5
         version: 24.13.5
+      '@types/nodemailer':
+        specifier: ^8.0.2
+        version: 8.0.2
       '@types/react':
         specifier: ^19.2.18
         version: 19.3.0
@@ -683,6 +686,9 @@ packages:
   '@types/node@24.13.5':
     resolution: {integrity: sha512-TXyindR+lBr22aJIdMQzCFHPHR6cR4js838mRDCSz5hOKWZvZwsXSSiXDmjRj4iJmgl+sR9O+1mkoVBSMadNug==}
 
+  '@types/nodemailer@8.0.2':
+    resolution: {integrity: sha512-c7M5ox8p0nEOfbJ2E9Qcmt8/QCu/VzsiAhzBiZbvky2PhKZDHpKB3sQHBM5MEZNkCfBOaS6S9//AGPRTNB7IaA==}
+
   '@types/react-dom@19.3.0':
     resolution: {integrity: sha512-ZI7bU42mZXXKHn/qNLEw2IrbiINU7X5+vfgdixBHkCNpYWXjKgfQ/P+uyGb5CjOLB9UcnTeg3rylQtV2hym44Q==}
     peerDependencies:
@@ -1248,9 +1254,9 @@ packages:
     resolution: {integrity: sha512-x0InOIyzgdk+eyaWaRJFH5snEtiImgBgblZ2CyPrLmqqcuMQkEvcDPHbzqbD8eDsSeJbVOjn+crzyzHaM4D+/A==}
     engines: {node: '>=18'}
 
-  nodemailer@7.0.13:
-    resolution: {integrity: sha512-PNDFSJdP+KFgdsG3ZzMXCgquO7I6McjY2vlqILjtJd0hy8wEvtugS9xKRF2NWlPNGxvLCXlTNIae4serI7dinw==}
-    engines: {node: '>=6.0.0'}
+  nodemailer@10.0.10:
+    resolution: {integrity: sha512-He9XskOFms62SyAKkLu8CcGcYHAo+BSHSsORI8s4PJH8qZgZY4L4lDfvyN0twvmbpyG+eGrxpyBlskj9d9rJ8A==}
+    engines: {node: '>=20.0.0'}
 
   oauth4webapi@3.8.8:
     resolution: {integrity: sha512-8N28E+a/oxfXWBgOMt+ZP/JUf/XR+IFbvkAEPP3gznXOMv9BpAAwiIj0TFNz3tGTPc0ZQ8zmWBNgN1nAys0gng==}
@@ -1520,7 +1526,7 @@ packages:
 
 snapshots:
 
-  '@auth/core@0.41.3(nodemailer@7.0.13)':
+  '@auth/core@0.41.3(nodemailer@10.0.10)':
     dependencies:
       '@panva/hkdf': 1.2.1
       jose: 6.2.12
@@ -1528,7 +1534,7 @@ snapshots:
       preact: 10.24.3
       preact-render-to-string: 6.5.11(preact@10.24.3)
     optionalDependencies:
-      nodemailer: 7.0.13
+      nodemailer: 10.0.10
 
   '@babel/code-frame@7.29.7':
     dependencies:
@@ -1642,9 +1648,9 @@ snapshots:
       hashery: 1.5.1
       keyv: 5.6.0
 
-  '@convex-dev/auth@0.0.95(@auth/core@0.41.3(nodemailer@7.0.13))(convex@1.46.0(react@19.3.0))(react@19.3.0)':
+  '@convex-dev/auth@0.0.95(@auth/core@0.41.3(nodemailer@10.0.10))(convex@1.46.0(react@19.3.0))(react@19.3.0)':
     dependencies:
-      '@auth/core': 0.41.3(nodemailer@7.0.13)
+      '@auth/core': 0.41.3(nodemailer@10.0.10)
       '@oslojs/crypto': 1.0.1
       '@oslojs/encoding': 1.1.0
       convex: 1.46.0(react@19.3.0)
@@ -1984,6 +1990,10 @@ snapshots:
   '@types/node@24.13.5':
     dependencies:
       undici-types: 7.18.2
+
+  '@types/nodemailer@8.0.2':
+    dependencies:
+      '@types/node': 24.13.5
 
   '@types/react-dom@19.3.0(@types/react@19.3.0)':
     dependencies:
@@ -2515,7 +2525,7 @@ snapshots:
 
   node-releases@2.0.56: {}
 
-  nodemailer@7.0.13: {}
+  nodemailer@10.0.10: {}
 
   oauth4webapi@3.8.8: {}
 
