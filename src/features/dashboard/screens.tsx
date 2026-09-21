@@ -3,8 +3,9 @@ import { useQuery, usePaginatedQuery } from "convex/react";
 import { ArrowRight, ChevronRight, ClipboardCheck, Download, Fingerprint, KeyRound, LibraryBig, LockKeyhole, Plus, ShieldAlert, ShieldCheck, Users } from "lucide-react";
 import { Link } from "react-router-dom";
 import { api } from "../../../convex/_generated/api";
-import { dateLabel } from "../core/constants";
+import { accessStateLabel, dateLabel } from "../core/constants";
 import type { Profile } from "../core/types";
+import { accessDeviceKey } from "../core/accessDevice";
 import { AuditList, Badge, Empty, Loading, Mark, MetricCard, PageHeading, PanelHeader, RecordRows } from "../../components/ui/product";
 export function ResearcherHome() {
   const data = useQuery(api.research.dashboardSummary, { personal: true }) as any;
@@ -16,7 +17,7 @@ export function ResearcherHome() {
   );
   const requests = usePaginatedQuery(
     api.research.myAccessRequests,
-    {},
+    { deviceKey: accessDeviceKey() },
     { initialNumItems: 5 },
   );
   if (data === undefined || me === undefined) return <Loading />;
@@ -150,7 +151,7 @@ export function ResearcherHome() {
                       {r.organization} · {r.purpose}
                     </p>
                     <small>
-                      {r.status}
+                      {accessStateLabel(r.accessState ?? r.status)}
                       {r.expiresAt
                         ? ` · access until ${dateLabel(r.expiresAt)}`
                         : ""}

@@ -41,13 +41,13 @@ export function AppRoutes() {
       </Route>
       <Route element={<Guard />}>
         <Route path="/app" element={<WorkspaceFrame />}>
+          <Route path="research/:id" element={<UserResearchDetail />} />
           <Route element={<Guard roles={["researcher", "partner", "supervisor"]} />}>
             <Route index element={<UserDashboard />} />
             <Route path="research" element={<UserResearchRegistry />} />
             <Route element={<Guard roles={["researcher", "partner", "supervisor"]} />}>
               <Route path="research/new" element={<UserNewResearch />} />
             </Route>
-            <Route path="research/:id" element={<UserResearchDetail />} />
             <Route path="access" element={<UserAccessRequests />} />
             <Route path="reviews" element={<UserAccessReviews />} />
             <Route path="profile" element={<SettingsPage />} />

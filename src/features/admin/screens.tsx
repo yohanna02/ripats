@@ -5,7 +5,7 @@ import { Activity, ArrowRight, BookOpen, Check, CheckCircle2, ChevronDown, Searc
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
-import { dateLabel, errorText, roleNames } from "../core/constants";
+import { accessStateLabel, dateLabel, errorText, roleNames } from "../core/constants";
 import type { Role } from "../core/types";
 import { Badge, Brand, Empty, Loading, Mark, PageHeading, PanelHeader, PrimaryButton, SecondaryButton, TextField } from "../../components/ui/product";
 import { useToast } from "../../components/ui/toast";
@@ -386,7 +386,7 @@ export function SetupAdminPage() {
 export function MyAccessPage() {
   const page = usePaginatedQuery(
     api.research.myAccessRequests,
-    {},
+    { deviceKey: accessDeviceKey() },
     { initialNumItems: 25 },
   );
   const activate = useMutation(api.research.activateAccess);
@@ -433,7 +433,7 @@ export function MyAccessPage() {
                   {r.researchCode} · {r.organization}
                 </small>
               </div>
-              <Badge tone={r.status}>{r.status}</Badge>
+              <Badge tone={r.status}>{accessStateLabel(r.accessState ?? r.status)}</Badge>
             </header>
             <div className="rp-access-details">
               <div>
@@ -450,42 +450,40 @@ export function MyAccessPage() {
                   {r.reviewedAt ? dateLabel(r.reviewedAt) : "Awaiting review"}
                 </strong>
               </div>
-              {r.status === "approved" && (
+              {(r.accessState === "approved" || r.accessState === "read_research") && (
                 <div>
                   <small>Access expires</small>
                   <strong>{r.expiresAt ? dateLabel(r.expiresAt) : "—"}</strong>
                 </div>
               )}
-              {r.status === "approved" && r.accessCode && (
-                <div>
-                  <small>Activation code</small>
-                  <strong>{r.accessCode}</strong>
-                </div>
-              )}
             </div>
-            {r.status === "approved" && (
+            {(r.accessState === "approved" || r.accessState === "read_research") && (
               <footer className="rp-access-activation">
-                <TextField
-                  label="Access code"
-                  value={codes[r._id] ?? ""}
-                  onChange={(event) =>
-                    setCodes((current) => ({
-                      ...current,
-                      [r._id]: event.target.value,
-                    }))
-                  }
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                />
-                <PrimaryButton
-                  disabled={busy === r._id || !codes[r._id]?.trim()}
-                  onClick={() => void activateRequest(r._id)}
-                >
-                  {busy === r._id ? "Activating…" : "Activate this device"}
-                </PrimaryButton>
-                {r.sessionDeviceKeyHash && (
+                {r.accessState === "approved" && (
+                  <>
+                    <TextField
+                      label="Access code"
+                      value={codes[r._id] ?? ""}
+                      onChange={(event) =>
+                        setCodes((current) => ({
+                          ...current,
+                          [r._id]: event.target.value,
+                        }))
+                      }
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                    />
+                    <PrimaryButton
+                      disabled={busy === r._id || !codes[r._id]?.trim()}
+                      onClick={() => void activateRequest(r._id)}
+                    >
+                      {busy === r._id ? "Activating…" : "Activate this device"}
+                    </PrimaryButton>
+                  </>
+                )}
+                {r.accessState === "read_research" && (
                   <Link className="rp-secondary" to={`/app/research/${r.researchId}`}>
-                    Open authorized record
+                    Read research <ArrowRight />
                   </Link>
                 )}
               </footer>

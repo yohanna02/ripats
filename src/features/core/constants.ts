@@ -28,5 +28,16 @@ export const errorText = (error: unknown) =>
     ? error.message.replace(/^Uncaught Error: /, "")
     : "Something went wrong. Please try again.";
 
+export const accessStateLabel = (state: string) => {
+  switch (state) {
+    case "awaiting_review": return "Awaiting review";
+    case "read_research": return "Read research";
+    case "declined": return "Declined";
+    case "expired": return "Expired";
+    case "approved": return "Approved · activate device";
+    default: return state.replaceAll("_", " ");
+  }
+};
+
 export const isInstitutionalRole = (role: Role) =>
   ["administrator", "ip_officer", "security_officer"].includes(role);

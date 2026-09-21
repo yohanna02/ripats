@@ -5,9 +5,11 @@ import { usePaginatedQuery, useQuery } from "convex/react";
 import { Activity, ArrowRight, Building2, ChevronDown, ClipboardCheck, FileText, Fingerprint, GraduationCap, KeyRound, LibraryBig, LockKeyhole, LogIn, LogOut, Search, Settings, ShieldAlert, ShieldCheck, SlidersHorizontal, UserCheck } from "lucide-react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { api } from "../../../convex/_generated/api";
+import type { Id } from "../../../convex/_generated/dataModel";
 import { Brand, Badge, ClassificationBadge, Empty, Loading, Mark } from "../../components/ui/product";
 import type { Classification, Profile } from "../core/types";
 import { RequestAccess } from "../research/screens";
+import { accessDeviceKey } from "../core/accessDevice";
 import { useAppStore } from "../../store/useAppStore";
 function PublicHeader() {
   const authStatus = useAppStore((state) => state.authStatus);
@@ -228,7 +230,7 @@ export function LandingPage() {
                     </div>
                     <span className="rp-live-archive-meta">
                       {item.protected ? <><LockKeyhole /> Protected</> : <><ShieldCheck /> Discoverable</>}
-                      <Link to={`/research/${item.researchId}`} aria-label={`View ${item.title}`}><ArrowRight /></Link>
+                      <Link to={`/research/${item._id}`} aria-label={`View ${item.title}`}><ArrowRight /></Link>
                     </span>
                   </article>
                 ))
@@ -494,7 +496,7 @@ export function PublicArchive() {
                 <p>{item.abstract}</p>
                 <footer>
                   <span>{item.application || "Research collaboration"}</span>
-                  <Link to={`/research/${item.researchId}`}>
+                  <Link to={`/research/${item._id}`}>
                     View research record <ArrowRight />
                   </Link>
                 </footer>
@@ -525,14 +527,24 @@ export function PublicArchive() {
 
 export function PublicInnovationPage() {
   const { researchId } = useParams();
-  const record = useQuery(api.research.publicProfileById, {
-    researchId: researchId ?? "",
-  }) as any;
+  const record = useQuery(
+    api.research.publicProfileById,
+    researchId ? { researchId: researchId as Id<"research"> } : "skip",
+  ) as any;
   const { isAuthenticated } = useConvexAuth();
   const me = useQuery(api.account.me, isAuthenticated ? {} : "skip") as
     Profile | null | undefined;
+  const access = useQuery(
+    api.research.publicAccessState,
+    isAuthenticated && record?._id
+      ? { researchId: record._id, deviceKey: accessDeviceKey() }
+      : "skip",
+  ) as { state: string; expiresAt?: number | null } | null | undefined;
 
-  if (record === undefined || (isAuthenticated && me === undefined))
+  if (
+    record === undefined ||
+    (isAuthenticated && (me === undefined || access === undefined))
+  )
     return <Loading full />;
   if (!record)
     return (
@@ -582,8 +594,46 @@ export function PublicInnovationPage() {
             request. Institutional review is required before protected material
             is shared.
           </p>
-          {isAuthenticated && me ? (
-            <RequestAccess id={record._id} />
+          {isAuthenticated && me && access?.state === "read_research" ? (
+            <AccessStatusCard
+              title="Research access is active"
+              detail="This device is authorized to read the protected research until the grant expires."
+              actionLabel="Read research"
+              actionTo={`/app/research/${record._id}`}
+              actionEnabled
+            />
+          ) : isAuthenticated && me && access?.state === "approved" ? (
+            <AccessStatusCard
+              title="Access approved"
+              detail="Activate this device with your access code before opening the protected research."
+              actionLabel="Activate access"
+              actionTo="/app/access"
+            />
+          ) : isAuthenticated && me && access?.state === "awaiting_review" ? (
+            <AccessStatusCard
+              title="Awaiting review"
+              detail="Your request is with the research owner or institutional reviewer."
+              actionLabel="View request"
+              actionTo="/app/access"
+            />
+          ) : isAuthenticated && me && access?.state === "owner" ? (
+            <AccessStatusCard
+              title="You manage this research"
+              detail="You registered this paper, so controlled access is managed from your workspace."
+              actionLabel="You own this research"
+              actionTo={`/app/research/${record._id}`}
+            />
+          ) : isAuthenticated && me ? (
+            <RequestAccess
+              id={record._id}
+              requestLabel={
+                access?.state === "declined"
+                  ? "Request access again"
+                  : access?.state === "expired"
+                    ? "Request renewed access"
+                    : "Request access"
+              }
+            />
           ) : (
             <Link className="rp-primary" to="/sign-in">
               Sign in to request access <ArrowRight />
@@ -593,5 +643,38 @@ export function PublicInnovationPage() {
       </section>
       <PublicFooter />
     </main>
+  );
+}
+
+function AccessStatusCard({
+  title,
+  detail,
+  actionLabel,
+  actionTo,
+  actionEnabled = false,
+}: {
+  title: string;
+  detail: string;
+  actionLabel: string;
+  actionTo: string;
+  actionEnabled?: boolean;
+}) {
+  return (
+    <section className="rp-panel">
+      <div className="rp-request-box">
+        <KeyRound />
+        <strong>{title}</strong>
+        <p>{detail}</p>
+        <Link
+          className={`rp-primary${actionEnabled ? "" : " rp-disabled"}`}
+          to={actionTo}
+          aria-disabled={!actionEnabled}
+          tabIndex={actionEnabled ? undefined : -1}
+          onClick={actionEnabled ? undefined : (event) => event.preventDefault()}
+        >
+          {actionLabel} <ArrowRight />
+        </Link>
+      </div>
+    </section>
   );
 }

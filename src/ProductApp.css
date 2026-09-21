@@ -244,6 +244,18 @@ svg {
   opacity: 0.55;
   cursor: wait;
 }
+.rp-primary.rp-disabled,
+.rp-secondary.rp-disabled,
+.rp-primary[aria-disabled="true"],
+.rp-secondary[aria-disabled="true"] {
+  background: #e7ecea;
+  color: #6f7c76;
+  border-color: #c6d1cb;
+  cursor: not-allowed;
+  pointer-events: none;
+  opacity: 1;
+  box-shadow: none;
+}
 .rp-eyebrow {
   display: inline-block;
   color: var(--rp-brass);
@@ -1048,6 +1060,12 @@ svg {
   width: 100%;
   margin-top: 19px;
 }
+.rp-auth-verification-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  margin-top: 18px;
+}
 .rp-back {
   display: inline-flex;
   align-items: center;
@@ -1403,6 +1421,10 @@ svg {
   border: 0;
   background: #fff;
 }
+.rp-viewer-fallback {
+  display: inline-flex;
+  margin: 8px 18px 16px;
+}
 .rp-viewer pre {
   min-height: 100%;
   margin: 0;
@@ -1745,6 +1767,42 @@ svg {
   align-items: center;
   gap: 12px;
   border-bottom: 1px solid #edf0ed;
+}
+.rp-record-row.has-delete {
+  grid-template-columns: minmax(0, 1fr) 34px;
+  padding-right: 8px;
+}
+.rp-record-row-link {
+  min-height: 53px;
+  display: grid;
+  grid-template-columns: 39px minmax(150px, 1fr) auto auto 92px 17px;
+  align-items: center;
+  gap: 12px;
+}
+.rp-row-delete {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  color: #9c3030;
+  border: 1px solid #d9aaaa;
+  background: #fff;
+  cursor: pointer;
+}
+.rp-row-delete:hover:not(:disabled) {
+  color: #fff;
+  border-color: #a73737;
+  background: #a73737;
+}
+.rp-row-delete:disabled {
+  color: #aeb8b2;
+  border-color: #dfe5e1;
+  background: #f3f5f3;
+  cursor: not-allowed;
+}
+.rp-row-delete svg {
+  width: 15px;
+  height: 15px;
 }
 .rp-record-row:hover {
   background: #fafcf9;

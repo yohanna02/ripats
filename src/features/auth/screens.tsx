@@ -17,6 +17,29 @@ export function AuthPage({ mode }: { mode: "sign-in" | "sign-up" }) {
   const [verification, setVerification] = useState(false);
   const [code, setCode] = useState("");
   const [resetMode, setResetMode] = useState<"request" | "verify" | null>(null);
+  const resendVerification = async () => {
+    setError("");
+    setBusy(true);
+    try {
+      await signIn("password", {
+        flow: "signIn",
+        email: email.trim().toLowerCase(),
+        password,
+      });
+      setCode("");
+      showToast({
+        kind: "success",
+        title: "Verification code sent",
+        detail: "Check your email for the latest code.",
+      });
+    } catch (err) {
+      const message = errorText(err);
+      setError(message);
+      showToast({ kind: "error", title: "Could not resend code", detail: message });
+    } finally {
+      setBusy(false);
+    }
+  };
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
@@ -187,16 +210,22 @@ export function AuthPage({ mode }: { mode: "sign-in" | "sign-up" }) {
             <ArrowRight />
           </PrimaryButton>
           {verification && (
-            <button
-              type="button"
-              className="rp-text-link "
-              onClick={() => {
-                setVerification(false);
-                setCode("");
-              }}
-            >
-              Use a different address
-            </button>
+            <div className="rp-auth-verification-actions">
+              <button type="button" className="rp-text-link" onClick={() => void resendVerification()} disabled={busy}>
+                Resend code
+              </button>
+              <button
+                type="button"
+                className="rp-text-link"
+                onClick={() => {
+                  setVerification(false);
+                  setCode("");
+                }}
+                disabled={busy}
+              >
+                Use a different address
+              </button>
+            </div>
           )}
           {!verification && mode === "sign-in" && !resetMode && (
             <button

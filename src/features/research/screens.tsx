@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useConvexAuth } from "@convex-dev/auth/react";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
-import { ArrowLeft, ArrowRight, Check, CheckCircle2, ChevronDown, Clock3, Eye, FileCheck2, Fingerprint, LockKeyhole, Pencil, Search, Trash2, Upload, X, XCircle } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, CheckCircle2, ChevronDown, ChevronRight, Clock3, Eye, FileCheck2, FileText, Fingerprint, LockKeyhole, Pencil, Search, Trash2, Upload, X, XCircle } from "lucide-react";
 import mammoth from "mammoth";
 import * as XLSX from "xlsx";
 import JSZip from "jszip";
@@ -11,7 +11,7 @@ import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import { dateLabel, errorText, roleNames } from "../core/constants";
 import type { Classification, Profile, Research } from "../core/types";
-import { Badge, ClassificationBadge, Empty, Loading, Mark, PageHeading, PanelHeader, PrimaryButton, RecordRows, SecondaryButton, TextArea, TextField } from "../../components/ui/product";
+import { Badge, ClassificationBadge, Empty, Loading, Mark, PageHeading, PanelHeader, PrimaryButton, SecondaryButton, TextArea, TextField } from "../../components/ui/product";
 import { useToast } from "../../components/ui/toast";
 import { accessDeviceKey } from "../core/accessDevice";
 import { accessRequestContext } from "../core/requestContext";
@@ -94,7 +94,7 @@ export function RegistryPage({
           <span />
         </div>
         {rows.length ? (
-          <RecordRows rows={rows} />
+          <RegistryRows rows={rows} workspace={workspace} />
         ) : (
           <Empty
             title="No matching records"
@@ -112,6 +112,55 @@ export function RegistryPage({
         )}
       </section>
     </>
+  );
+}
+
+function RegistryRows({ rows, workspace }: { rows: Research[]; workspace: string }) {
+  const remove = useMutation(api.research.remove);
+  const [busyId, setBusyId] = useState<Id<"research"> | null>(null);
+  const { showToast } = useToast();
+  const deleteRecord = async (record: Research) => {
+    if (record.status !== "draft" || record.innovationPublished) return;
+    if (!window.confirm(`Delete ${record.researchId} and its uploaded versions? This cannot be undone.`)) return;
+    setBusyId(record._id);
+    try {
+      await remove({ id: record._id });
+      showToast({ kind: "success", title: "Research deleted", detail: `${record.researchId} was removed.` });
+    } catch (error) {
+      showToast({ kind: "error", title: "Research was not deleted", detail: errorText(error) });
+    } finally {
+      setBusyId(null);
+    }
+  };
+  return (
+    <div className="rp-record-list">
+      {rows.map((row) => {
+        const deletable = row.status === "draft" && !row.innovationPublished;
+        const disabled = busyId === row._id || !deletable;
+        return (
+          <article className="rp-record-row has-delete" key={row._id}>
+            <Link className="rp-record-row-link" to={`${workspace}/research/${row._id}`}>
+              <Mark tone="green"><FileText /></Mark>
+              <span><strong>{row.title}</strong><small>{row.researchId} · {row.field} · {row.department}</small></span>
+              <ClassificationBadge value={row.classification} />
+              <Badge tone={row.status}>{row.status.replaceAll("_", " ")}</Badge>
+              <time>{dateLabel(row.updatedAt)}</time>
+              <ChevronRight />
+            </Link>
+            <button
+              className="rp-row-delete"
+              type="button"
+              title={deletable ? "Delete unpublished research" : "Only unpublished draft research can be deleted"}
+              aria-label={deletable ? `Delete ${row.title}` : `Delete unavailable for ${row.title}`}
+              disabled={disabled}
+              onClick={() => void deleteRecord(row)}
+            >
+              <Trash2 />
+            </button>
+          </article>
+        );
+      })}
+    </div>
   );
 }
 
@@ -408,16 +457,22 @@ function VersionRow({
         versionId: version._id,
         deviceKey: accessDeviceKey(),
       });
-      if (url) {
-        const response = await fetch(url);
-        if (!response.ok) throw new Error("The authorized document could not be loaded.");
-        setViewer({
-          blob: await response.blob(),
-          fileName: version.fileName,
-          contentType: version.contentType,
-        });
-        showToast({ kind: "success", title: "Document opened" });
+      if (!url) {
+        showToast({ kind: "error", title: "Download unavailable", detail: "This document is not authorized for your device." });
+        return;
       }
+      const response = await fetch(url);
+      if (!response.ok) throw new Error("The authorized document could not be loaded.");
+      const declaredLength = Number(response.headers.get("Content-Length") ?? 0);
+      if (declaredLength > 25 * 1024 * 1024) {
+        throw new Error("This document exceeds the 25 MB viewer limit.");
+      }
+      setViewer({
+        blob: await response.blob(),
+        fileName: version.fileName,
+        contentType: version.contentType || response.headers.get("Content-Type") || undefined,
+      });
+      showToast({ kind: "success", title: "Document opened" });
     } catch (error) {
       showToast({
         kind: "error",
@@ -474,6 +529,28 @@ function VersionRow({
   );
 }
 
+const MAX_VIEWER_BYTES = 25 * 1024 * 1024;
+
+function sanitizeHtml(value: string) {
+  const template = document.createElement("template");
+  template.innerHTML = value;
+  template.content
+    .querySelectorAll("script, style, iframe, object, embed, link, meta")
+    .forEach((node) => node.remove());
+  template.content.querySelectorAll("*[onerror], *[onload], *[onclick], *[onmouseover]").forEach((node) => {
+    for (const attribute of Array.from(node.attributes)) {
+      if (attribute.name.toLowerCase().startsWith("on")) node.removeAttribute(attribute.name);
+    }
+  });
+  template.content.querySelectorAll("a[href]").forEach((anchor) => {
+    const href = anchor.getAttribute("href");
+    if (!href || /^\s*javascript:/i.test(href) || /^\s*data:/i.test(href)) {
+      anchor.removeAttribute("href");
+    }
+  });
+  return template.innerHTML;
+}
+
 function DocumentViewer({
   blob,
   fileName,
@@ -486,13 +563,26 @@ function DocumentViewer({
   onClose: () => void;
 }) {
   const [state, setState] = useState<{ kind: "loading" } | { kind: "error"; message: string } | { kind: "html"; value: string } | { kind: "text"; value: string } | { kind: "pdf"; url: string }>(() => ({ kind: "loading" }));
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleKey);
+    dialogRef.current?.focus();
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [onClose]);
   useEffect(() => {
     let active = true;
     let objectUrl: string | undefined;
     const lowerName = fileName.toLowerCase();
     const type = contentType || blob.type;
-    const load = async () => {
+  const load = async () => {
       try {
+        if (blob.size > MAX_VIEWER_BYTES) {
+          if (active) setState({ kind: "error", message: "This document exceeds the 25 MB viewer limit." });
+          return;
+        }
         if (type === "application/pdf" || lowerName.endsWith(".pdf")) {
           objectUrl = URL.createObjectURL(blob);
           if (active) setState({ kind: "pdf", url: objectUrl });
@@ -507,16 +597,16 @@ function DocumentViewer({
           if (active) setState({ kind: "html", value: result.value });
           return;
         }
-        if (type.includes("spreadsheet") || /\.(xlsx|xls)$/i.test(lowerName)) {
+      if (type.includes("spreadsheet") || /\.(xlsx|xls)$/i.test(lowerName)) {
           const workbook = XLSX.read(await blob.arrayBuffer(), { type: "array" });
           const html = workbook.SheetNames.map((sheetName) => `<h3>${escapeHtml(sheetName)}</h3>${XLSX.utils.sheet_to_html(workbook.Sheets[sheetName])}`).join("");
-          if (active) setState({ kind: "html", value: html });
+          if (active) setState({ kind: "html", value: sanitizeHtml(html) });
           return;
         }
         if (type === "application/zip" || lowerName.endsWith(".zip")) {
           const archive = await JSZip.loadAsync(blob);
           const names = Object.keys(archive.files).map((name) => `<li>${escapeHtml(name)}</li>`).join("");
-          if (active) setState({ kind: "html", value: `<p>This ZIP archive contains ${Object.keys(archive.files).length} entries.</p><ul>${names}</ul>` });
+          if (active) setState({ kind: "html", value: sanitizeHtml(`<p>This ZIP archive contains ${Object.keys(archive.files).length} entries.</p><ul>${names}</ul>`) });
           return;
         }
         if (active) setState({ kind: "error", message: "This document type cannot be rendered in the viewer." });
@@ -531,10 +621,20 @@ function DocumentViewer({
     };
   }, [blob, contentType, fileName]);
   return (
-    <div className="rp-viewer-backdrop" role="dialog" aria-modal="true" aria-label={`Viewing ${fileName}`}>
+    <div
+      className="rp-viewer-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Viewing ${fileName}`}
+      tabIndex={-1}
+      ref={dialogRef}
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
       <section className="rp-viewer">
         <header><div><strong>{fileName}</strong><small>Authorized in-app document viewer</small></div><button title="Close viewer" onClick={onClose}><X /></button></header>
-        <main>{state.kind === "loading" && <Loading />}{state.kind === "error" && <div className="rp-error">{state.message}</div>}{state.kind === "pdf" && <iframe title={fileName} src={state.url} />}{state.kind === "text" && <pre>{state.value}</pre>}{state.kind === "html" && <div className="rp-viewer-html" dangerouslySetInnerHTML={{ __html: state.value }} />}</main>
+        <main>{state.kind === "loading" && <Loading />}{state.kind === "error" && <div className="rp-error">{state.message}</div>}{state.kind === "pdf" && <><iframe title={fileName} src={state.url} /><a className="rp-text-link rp-viewer-fallback" href={state.url} target="_blank" rel="noreferrer">Open PDF in a new tab</a></>}{state.kind === "text" && <pre>{state.value}</pre>}{state.kind === "html" && <div className="rp-viewer-html" dangerouslySetInnerHTML={{ __html: state.value }} />}</main>
       </section>
     </div>
   );
@@ -621,7 +721,13 @@ function VersionUpload({ id }: { id: Id<"research"> }) {
     </section>
   );
 }
-export function RequestAccess({ id }: { id: Id<"research"> }) {
+export function RequestAccess({
+  id,
+  requestLabel = "Request access",
+}: {
+  id: Id<"research">;
+  requestLabel?: string;
+}) {
   const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
   const send = useMutation(api.research.requestAccess);
   const [open, setOpen] = useState(false);
@@ -680,7 +786,7 @@ export function RequestAccess({ id }: { id: Id<"research"> }) {
         </p>
         {!open ? (
           <SecondaryButton onClick={() => setOpen(true)}>
-            Request access <ArrowRight />
+            {requestLabel} <ArrowRight />
           </SecondaryButton>
         ) : (
           <form onSubmit={submit}>

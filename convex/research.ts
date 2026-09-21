@@ -175,7 +175,7 @@ export const publicProfiles = query({
 });
 
 export const publicProfileById = query({
-  args: { researchId: v.string() },
+  args: { researchId: v.id("research") },
   returns: v.union(
     v.null(),
     v.object({
@@ -192,10 +192,7 @@ export const publicProfileById = query({
     }),
   ),
   handler: async (ctx, args) => {
-    const record = await ctx.db
-      .query("research")
-      .withIndex("by_research_id", (q) => q.eq("researchId", args.researchId))
-      .unique();
+    const record = await ctx.db.get(args.researchId);
     if (
       !record ||
       record.status !== "published" ||
@@ -217,6 +214,59 @@ export const publicProfileById = query({
       status: record.status,
       protected: !(record.innovationPublished && record.innovationSummary?.trim()),
     };
+  },
+});
+
+export const publicAccessState = query({
+  args: {
+    researchId: v.id("research"),
+    deviceKey: v.optional(v.string()),
+  },
+  returns: v.any(),
+  handler: async (ctx, args) => {
+    const profile = await requireProfile(ctx);
+    const record = await ctx.db.get(args.researchId);
+    if (!record) return null;
+    if (record.ownerProfileId === profile._id)
+      return { state: "owner" };
+
+    const statuses = ["pending", "approved", "declined", "expired"] as const;
+    const requests = (
+      await Promise.all(
+        statuses.map((status) =>
+          ctx.db
+            .query("accessRequests")
+            .withIndex("by_research_id_and_status", (q) =>
+              q.eq("researchId", record._id).eq("status", status),
+            )
+            .take(20),
+        ),
+      )
+    )
+      .flat()
+      .filter((request) => request.requesterProfileId === profile._id)
+      .sort((a, b) => b.createdAt - a.createdAt);
+    if (!requests.length) return { state: "none" };
+
+    const now = Date.now();
+    const activeGrant = requests.find(
+      (request) =>
+        request.status === "approved" && (request.expiresAt ?? 0) > now,
+    );
+    if (activeGrant) {
+      const sessionActive =
+        Boolean(activeGrant.sessionDeviceKeyHash) &&
+        activeGrant.sessionDeviceKeyHash === args.deviceKey;
+      return {
+        state: sessionActive ? "read_research" : "approved",
+        expiresAt: activeGrant.expiresAt ?? null,
+      };
+    }
+
+    const latest = requests[0];
+    if (latest.status === "pending") return { state: "awaiting_review" };
+    if (latest.status === "declined") return { state: "declined" };
+    return { state: "expired" };
   },
 });
 
@@ -258,10 +308,14 @@ export const get = query({
 });
 
 export const myAccessRequests = query({
-  args: { paginationOpts: paginationOptsValidator },
+  args: {
+    paginationOpts: paginationOptsValidator,
+    deviceKey: v.optional(v.string()),
+  },
   returns: paginationResultValidator(v.any()),
   handler: async (ctx, args) => {
     const profile = await requireProfile(ctx);
+    const now = Date.now();
     const page = await ctx.db
       .query("accessRequests")
       .withIndex("by_requester_profile_id_and_status", (q) =>
@@ -272,14 +326,32 @@ export const myAccessRequests = query({
     const enriched = [];
     for (const request of page.page) {
       const research = await ctx.db.get(request.researchId);
+      const expired = request.status === "approved" && (request.expiresAt ?? 0) <= now;
+      const effectiveStatus = expired ? "expired" : request.status;
+      const sessionActive =
+        effectiveStatus === "approved" &&
+        Boolean(request.sessionDeviceKeyHash && request.sessionDeviceKeyHash === args.deviceKey);
+      const accessState =
+        effectiveStatus === "pending"
+          ? "awaiting_review"
+          : effectiveStatus === "declined"
+            ? "declined"
+            : effectiveStatus === "expired"
+              ? "expired"
+              : sessionActive
+                ? "read_research"
+                : "approved";
+      const safeRequest = { ...request };
+      delete safeRequest.accessCode;
       enriched.push({
-        ...request,
+        ...safeRequest,
+        status: effectiveStatus,
+        accessState,
+        sessionActive,
         // Keep the request visible even if a related record is removed or
         // becomes unavailable. A request is still useful audit history.
         researchTitle: research?.title ?? "Research record unavailable",
         researchCode: research?.researchId ?? "Unavailable",
-        accessCode:
-          request.status === "approved" ? request.accessCode ?? null : null,
       });
     }
     return { ...page, page: enriched };
@@ -309,19 +381,20 @@ export const create = mutation({
     )
       throw new Error("Your account cannot register research.");
     const now = Date.now();
-    const sequence = await ctx.db
-      .query("research")
-      .withIndex("by_institution_id_and_updated_at", (q) =>
-        q.eq("institutionId", profile.institutionId),
-      )
-      .order("desc")
-      .take(1);
-    const number = String(
-      sequence.length
-        ? Number(sequence[0].researchId.split("-").at(-1)) + 1
-        : 1,
-    ).padStart(4, "0");
-    const researchId = `ATBU-RP-${new Date(now).getFullYear()}-${number}`;
+    let researchId = "";
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const suffix = crypto.randomUUID().replaceAll("-", "").slice(0, 8).toUpperCase();
+      const candidate = `ATBU-RP-${new Date(now).getFullYear()}-${suffix}`;
+      const existing = await ctx.db
+        .query("research")
+        .withIndex("by_research_id", (q) => q.eq("researchId", candidate))
+        .first();
+      if (!existing) {
+        researchId = candidate;
+        break;
+      }
+    }
+    if (!researchId) throw new Error("Could not allocate a unique research ID. Try again.");
     const id = await ctx.db.insert("research", {
       institutionId: profile.institutionId,
       ownerProfileId: profile._id,
@@ -669,9 +742,8 @@ export const getVersionDownloadUrl = mutation({
     if (!record || record.institutionId !== profile.institutionId) return null;
     let allowed =
       record.ownerProfileId === profile._id ||
-      ["administrator", "ip_officer", "supervisor"].includes(
-        profile.role,
-      );
+      profile.role === "administrator" ||
+      profile.role === "ip_officer";
     if (!allowed) {
       const grants = await ctx.db
         .query("accessRequests")
@@ -913,12 +985,15 @@ export const listAccessRequests = query({
     const page = [];
     for (const request of result.page) {
       const record = await ctx.db.get(request.researchId);
-      if (record)
+      if (record) {
+        const safeRequest = { ...request };
+        delete safeRequest.accessCode;
         page.push({
-          ...request,
+          ...safeRequest,
           researchTitle: record.title,
           researchCode: record.researchId,
         });
+      }
     }
     return { ...result, page };
   },
@@ -956,12 +1031,15 @@ export const listOwnedAccessRequests = query({
     const page = [];
     for (const request of result.page) {
       const record = await ctx.db.get(request.researchId);
-      if (record)
+      if (record) {
+        const safeRequest = { ...request };
+        delete safeRequest.accessCode;
         page.push({
-          ...request,
+          ...safeRequest,
           researchTitle: record.title,
           researchCode: record.researchId,
         });
+      }
     }
     return { ...result, page };
   },
@@ -988,18 +1066,20 @@ export const decideAccess = mutation({
     if (!mayDecide)
       throw new Error("You do not have authority to decide this request.");
     const now = Date.now();
+    const expiresAt =
+      args.decision === "approved"
+        ? now + request.durationHours * 60 * 60 * 1000
+        : undefined;
+    const accessCode =
+      args.decision === "approved"
+        ? String(Math.floor(100000 + Math.random() * 900000))
+        : undefined;
     await ctx.db.patch(request._id, {
       status: args.decision,
       reviewedByProfileId: profile._id,
       reviewedAt: now,
-      expiresAt:
-        args.decision === "approved"
-          ? now + request.durationHours * 60 * 60 * 1000
-          : undefined,
-      accessCode:
-        args.decision === "approved"
-          ? String(Math.floor(100000 + Math.random() * 900000))
-          : undefined,
+      expiresAt,
+      accessCode,
       sessionDeviceKeyHash: undefined,
       sessionActivatedAt: undefined,
       sessionLastUsedAt: undefined,
@@ -1029,7 +1109,7 @@ export const decideAccess = mutation({
       record._id,
       args.decision === "approved" ? "Access request approved" : "Access request declined",
       args.decision === "approved"
-        ? `Your request for ${record.researchId} was approved. Open My access requests to view the activation code and activate your session.`
+        ? `Your request for ${record.researchId} was approved. Check your email for the activation code, then open My access requests to activate your session.`
         : `Your request for ${record.researchId} was declined.`,
       args.decision === "approved" ? "success" : "error",
       {
@@ -1037,6 +1117,20 @@ export const decideAccess = mutation({
         actionRoute: "/app/access",
       },
     );
+    if (args.decision === "approved" && accessCode && expiresAt) {
+      const requester = await ctx.db.get(request.requesterProfileId);
+      const requesterUser = requester ? await ctx.db.get(requester.userId) : null;
+      if (requester?.displayName && requesterUser?.email) {
+        await ctx.scheduler.runAfter(0, internal.mail.sendAccessGrantNotice, {
+          to: requesterUser.email,
+          requesterName: requester.displayName,
+          researchTitle: record.title,
+          researchCode: record.researchId,
+          accessCode,
+          expiresAt,
+        });
+      }
+    }
     return null;
   },
 });
