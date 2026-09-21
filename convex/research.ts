@@ -5,6 +5,7 @@ import {
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
+import { internal } from "./_generated/api";
 import {
   requireAdministrator,
   requireDisclosureOfficer,
@@ -43,6 +44,11 @@ async function notifyProfile(
   title: string,
   detail: string,
   kind: "success" | "error" | "info" | "warning",
+  options?: {
+    relatedAccessRequestId?: Doc<"accessRequests">["_id"];
+    actionRoute?: string;
+    actionRequired?: boolean;
+  },
 ) {
   await ctx.db.insert("notifications", {
     recipientProfileId,
@@ -50,6 +56,11 @@ async function notifyProfile(
     title,
     detail,
     kind,
+    ...(options?.relatedAccessRequestId
+      ? { relatedAccessRequestId: options.relatedAccessRequestId }
+      : {}),
+    ...(options?.actionRoute ? { actionRoute: options.actionRoute } : {}),
+    ...(options?.actionRequired ? { actionRequired: true } : {}),
     createdAt: Date.now(),
   });
 }
@@ -76,7 +87,7 @@ export const listInstitution = query({
   },
   returns: paginationResultValidator(v.any()),
   handler: async (ctx, args) => {
-    const profile = await requireDisclosureOfficer(ctx);
+    const profile = await requireProfile(ctx);
     const rows = args.classification
       ? ctx.db
           .query("research")
@@ -520,6 +531,7 @@ export const addVersion = mutation({
       researchId: record._id,
       versionNumber,
       fileName: args.fileName,
+      contentType: metadata.contentType ?? undefined,
       storageId: args.storageId,
       sha256: metadata.sha256,
       notes: args.notes,
@@ -830,6 +842,39 @@ export const requestAccess = mutation({
       "success",
       record._id,
     );
+    const owner = await ctx.db.get(record.ownerProfileId);
+    // Administrators are the institutional reviewers and should not receive
+    // duplicate owner notifications for papers they registered themselves.
+    if (owner && owner.role !== "administrator") {
+      const reviewRoute =
+        owner.role === "ip_officer" ? "/admin/access" : "/app/reviews";
+      await notifyProfile(
+        ctx,
+        owner._id,
+        record._id,
+        "New access request",
+        `${profile.displayName} requested access to ${record.researchId}.`,
+        "info",
+        {
+          relatedAccessRequestId: id,
+          actionRoute: reviewRoute,
+          actionRequired: true,
+        },
+      );
+      const ownerUser = await ctx.db.get(owner.userId);
+      if (ownerUser?.email) {
+        await ctx.scheduler.runAfter(0, internal.mail.sendAccessRequestNotice, {
+          to: ownerUser.email,
+          ownerName: owner.displayName,
+          requesterName: profile.displayName,
+          researchTitle: record.title,
+          researchCode: record.researchId,
+          purpose: args.purpose.trim(),
+          durationHours: args.durationHours,
+          reviewRoute,
+        });
+      }
+    }
     return id;
   },
 });
@@ -929,13 +974,19 @@ export const decideAccess = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const profile = await requireDisclosureOfficer(ctx);
+    const profile = await requireProfile(ctx);
     const request = await ctx.db.get(args.id);
     if (!request || request.status !== "pending")
       throw new Error("Pending access request not found.");
     const record = await ctx.db.get(request.researchId);
     if (!record || record.institutionId !== profile.institutionId)
       throw new Error("Access request not found.");
+    const mayDecide =
+      record.ownerProfileId === profile._id ||
+      profile.role === "administrator" ||
+      profile.role === "ip_officer";
+    if (!mayDecide)
+      throw new Error("You do not have authority to decide this request.");
     const now = Date.now();
     await ctx.db.patch(request._id, {
       status: args.decision,
@@ -981,6 +1032,10 @@ export const decideAccess = mutation({
         ? `Your request for ${record.researchId} was approved. Open My access requests to view the activation code and activate your session.`
         : `Your request for ${record.researchId} was declined.`,
       args.decision === "approved" ? "success" : "error",
+      {
+        relatedAccessRequestId: request._id,
+        actionRoute: "/app/access",
+      },
     );
     return null;
   },

@@ -14,6 +14,7 @@ import AdminResearchDetail from "../pages/admin/ResearchDetail";
 import AdminSecurity from "../pages/admin/Security";
 import AdminUsers from "../pages/admin/Users";
 import UserAccessRequests from "../pages/app/AccessRequests";
+import UserAccessReviews from "../pages/app/AccessReviews";
 import UserDashboard from "../pages/app/Dashboard";
 import UserDocumentation from "../pages/app/Documentation";
 import UserNewResearch from "../pages/app/NewResearch";
@@ -48,6 +49,7 @@ export function AppRoutes() {
             </Route>
             <Route path="research/:id" element={<UserResearchDetail />} />
             <Route path="access" element={<UserAccessRequests />} />
+            <Route path="reviews" element={<UserAccessReviews />} />
             <Route path="profile" element={<SettingsPage />} />
             <Route path="documentation" element={<UserDocumentation />} />
           </Route>

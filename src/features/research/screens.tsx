@@ -1,8 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useConvexAuth } from "@convex-dev/auth/react";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
-import { ArrowLeft, ArrowRight, Check, CheckCircle2, ChevronDown, Clock3, Download, FileCheck2, Fingerprint, LockKeyhole, Pencil, Search, Trash2, Upload, XCircle } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, CheckCircle2, ChevronDown, Clock3, Eye, FileCheck2, Fingerprint, LockKeyhole, Pencil, Search, Trash2, Upload, X, XCircle } from "lucide-react";
+import mammoth from "mammoth";
+import * as XLSX from "xlsx";
+import JSZip from "jszip";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
@@ -380,6 +383,7 @@ function VersionRow({
   const fileInput = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [integrityResult, setIntegrityResult] = useState("");
+  const [viewer, setViewer] = useState<{ blob: Blob; fileName: string; contentType?: string } | null>(null);
   const verifyLocalFile = async (file?: File) => {
     if (!file) return;
     setIntegrityResult("Checking fingerprint…");
@@ -405,8 +409,14 @@ function VersionRow({
         deviceKey: accessDeviceKey(),
       });
       if (url) {
-        window.open(url, "_blank", "noopener,noreferrer");
-        showToast({ kind: "success", title: "Download started" });
+        const response = await fetch(url);
+        if (!response.ok) throw new Error("The authorized document could not be loaded.");
+        setViewer({
+          blob: await response.blob(),
+          fileName: version.fileName,
+          contentType: version.contentType,
+        });
+        showToast({ kind: "success", title: "Document opened" });
       }
     } catch (error) {
       showToast({
@@ -452,15 +462,86 @@ function VersionRow({
       )}
       {canDownload && (
         <button
-          title="Download registered file"
+          title="Open document viewer"
           disabled={busy}
           onClick={() => void getFile()}
         >
-          <Download />
+          <Eye />
         </button>
       )}
+      {viewer && <DocumentViewer {...viewer} onClose={() => setViewer(null)} />}
     </article>
   );
+}
+
+function DocumentViewer({
+  blob,
+  fileName,
+  contentType,
+  onClose,
+}: {
+  blob: Blob;
+  fileName: string;
+  contentType?: string;
+  onClose: () => void;
+}) {
+  const [state, setState] = useState<{ kind: "loading" } | { kind: "error"; message: string } | { kind: "html"; value: string } | { kind: "text"; value: string } | { kind: "pdf"; url: string }>(() => ({ kind: "loading" }));
+  useEffect(() => {
+    let active = true;
+    let objectUrl: string | undefined;
+    const lowerName = fileName.toLowerCase();
+    const type = contentType || blob.type;
+    const load = async () => {
+      try {
+        if (type === "application/pdf" || lowerName.endsWith(".pdf")) {
+          objectUrl = URL.createObjectURL(blob);
+          if (active) setState({ kind: "pdf", url: objectUrl });
+          return;
+        }
+        if (type === "text/plain" || type === "text/csv" || /\.(txt|csv)$/i.test(lowerName)) {
+          if (active) setState({ kind: "text", value: await blob.text() });
+          return;
+        }
+        if (type.includes("wordprocessingml") || lowerName.endsWith(".docx")) {
+          const result = await mammoth.convertToHtml({ arrayBuffer: await blob.arrayBuffer() });
+          if (active) setState({ kind: "html", value: result.value });
+          return;
+        }
+        if (type.includes("spreadsheet") || /\.(xlsx|xls)$/i.test(lowerName)) {
+          const workbook = XLSX.read(await blob.arrayBuffer(), { type: "array" });
+          const html = workbook.SheetNames.map((sheetName) => `<h3>${escapeHtml(sheetName)}</h3>${XLSX.utils.sheet_to_html(workbook.Sheets[sheetName])}`).join("");
+          if (active) setState({ kind: "html", value: html });
+          return;
+        }
+        if (type === "application/zip" || lowerName.endsWith(".zip")) {
+          const archive = await JSZip.loadAsync(blob);
+          const names = Object.keys(archive.files).map((name) => `<li>${escapeHtml(name)}</li>`).join("");
+          if (active) setState({ kind: "html", value: `<p>This ZIP archive contains ${Object.keys(archive.files).length} entries.</p><ul>${names}</ul>` });
+          return;
+        }
+        if (active) setState({ kind: "error", message: "This document type cannot be rendered in the viewer." });
+      } catch {
+        if (active) setState({ kind: "error", message: "The document could not be rendered." });
+      }
+    };
+    void load();
+    return () => {
+      active = false;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [blob, contentType, fileName]);
+  return (
+    <div className="rp-viewer-backdrop" role="dialog" aria-modal="true" aria-label={`Viewing ${fileName}`}>
+      <section className="rp-viewer">
+        <header><div><strong>{fileName}</strong><small>Authorized in-app document viewer</small></div><button title="Close viewer" onClick={onClose}><X /></button></header>
+        <main>{state.kind === "loading" && <Loading />}{state.kind === "error" && <div className="rp-error">{state.message}</div>}{state.kind === "pdf" && <iframe title={fileName} src={state.url} />}{state.kind === "text" && <pre>{state.value}</pre>}{state.kind === "html" && <div className="rp-viewer-html" dangerouslySetInnerHTML={{ __html: state.value }} />}</main>
+      </section>
+    </div>
+  );
+}
+
+function escapeHtml(value: string) {
+  return value.replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" })[character] ?? character);
 }
 function VersionUpload({ id }: { id: Id<"research"> }) {
   const [busy, setBusy] = useState(false);

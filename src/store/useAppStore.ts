@@ -46,6 +46,7 @@ type AppState = {
   setWorkspaceSearch: (search: string) => void;
   setAuthState: (status: AuthStatus, profile?: AuthProfile | null) => void;
   toggleNotifications: () => void;
+  setNotificationsOpen: (open: boolean) => void;
   showToast: (toast: ToastInput) => void;
   dismissToast: (id: number) => void;
 };
@@ -63,6 +64,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ authStatus, authProfile }),
   toggleNotifications: () =>
     set((state) => ({ isNotificationsOpen: !state.isNotificationsOpen })),
+  setNotificationsOpen: (isNotificationsOpen) => set({ isNotificationsOpen }),
   showToast: ({ kind = "info", duration = 5000, ...toast }) => {
     const id = Date.now() + Math.floor(Math.random() * 1000);
     set((state) => ({

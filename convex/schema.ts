@@ -89,6 +89,7 @@ export default defineSchema({
     researchId: v.id("research"),
     versionNumber: v.number(),
     fileName: v.string(),
+    contentType: v.optional(v.string()),
     storageId: v.optional(v.id("_storage")),
     sha256: v.string(),
     notes: v.optional(v.string()),
@@ -171,6 +172,7 @@ export default defineSchema({
   notifications: defineTable({
     recipientProfileId: v.id("userProfiles"),
     researchId: v.optional(v.id("research")),
+    relatedAccessRequestId: v.optional(v.id("accessRequests")),
     title: v.string(),
     detail: v.string(),
     kind: v.union(
@@ -179,6 +181,8 @@ export default defineSchema({
       v.literal("info"),
       v.literal("warning"),
     ),
+    actionRoute: v.optional(v.string()),
+    actionRequired: v.optional(v.boolean()),
     readAt: v.optional(v.number()),
     createdAt: v.number(),
   }).index("by_recipient_profile_id_and_created_at", [

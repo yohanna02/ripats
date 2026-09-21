@@ -12,11 +12,14 @@
   "dependencies": {
     "@convex-dev/auth": "^0.0.95",
     "convex": "^1.46.0",
+    "jszip": "^3.10.2",
     "lucide-react": "^1.47.0",
-    "nodemailer": "^10.0.10",
+    "mammoth": "^1.12.3",
+    "nodemailer": "^7.0.7",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-router-dom": "^7.18.4",
+    "xlsx": "^0.18.5",
     "zustand": "^5.0.15"
   },
   "devDependencies": {
